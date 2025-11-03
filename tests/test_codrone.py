@@ -8,6 +8,8 @@ print("Connected!")
 
 d.takeoff()
 d.hover(1)
+# d.flip("front")
+# d.hover(5)
 d.land()
 d.close()
 
