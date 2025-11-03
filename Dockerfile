@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # copy flight test script
-COPY test_codrone.py .
+COPY tests/test_codrone.py .
 
 # run script automatically
 CMD ["python", "test_codrone.py"]
