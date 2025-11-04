@@ -1,39 +1,53 @@
-# Continous Servo Test
+# Continous Servo Motor Test
 # 11/3/25
 
+import time
+import RPi.GPIO as GPIO
 
-from gpiozero import Servo # sudo apt install python3-gpiozero
-from time import sleep
+# Pin settings
+SERVO_PIN = 18   # use GPIO18 (physical pin 12) as hardware PWM
+FREQUENCY = 50   # typical servo signal frequency in Hz
 
-servo = Servo(17, min_pulse_width=0.0009, max_pulse_width=0.0021)
+# Duty cycle range for your servo
+# These values depend on the servo: adjust as needed
+MIN_DUTY = 2.5   # e.g., corresponds ~0°
+MAX_DUTY = 12.5  # e.g., corresponds ~180°
+CENTER_DUTY = (MIN_DUTY + MAX_DUTY)/2
 
-def test_servo():
-    print("Testing continuous rotation servo...")
+def setup():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
+    pwm = GPIO.PWM(SERVO_PIN, FREQUENCY)
+    pwm.start(0)
+    return pwm
 
-    # Full speed clockwise
-    print("Full speed clockwise")
-    servo.max()
-    sleep(2)
+def sweep_servo(pwm, delay=0.02):
+    # sweep from MIN to MAX
+    print("Sweeping from MIN to MAX")
+    for duty in [MIN_DUTY + (MAX_DUTY-MIN_DUTY)*i/100.0 for i in range(101)]:
+        pwm.ChangeDutyCycle(duty)
+        time.sleep(delay)
+    # sweep back
+    print("Sweeping from MAX back to MIN")
+    for duty in [MAX_DUTY - (MAX_DUTY-MIN_DUTY)*i/100.0 for i in range(101)]:
+        pwm.ChangeDutyCycle(duty)
+        time.sleep(delay)
+    # center
+    print("Centering servo")
+    pwm.ChangeDutyCycle(CENTER_DUTY)
+    time.sleep(1)
 
-    # Stop
-    print("Stop")
-    servo.mid()
-    sleep(1)
+def cleanup(pwm):
+    pwm.ChangeDutyCycle(0)
+    pwm.stop()
+    GPIO.cleanup()
 
-    # Full speed counterclockwise
-    print("Full speed counterclockwise")
-    servo.min()
-    sleep(2)
-
-    # Stop again
-    print("Stop")
-    servo.mid()
-    sleep(1)
-
-    print("Test complete.")
-
-try:
-    test_servo()
-except KeyboardInterrupt:
-    servo.mid()
-    print("\nStopped by user.")
+if __name__ == "__main__":
+    try:
+        pwm = setup()
+        sweep_servo(pwm)
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+    finally:
+        cleanup(pwm)
+        print("Done")
