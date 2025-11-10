@@ -70,4 +70,8 @@ sudo date -s "YYYY-MM-DD hh:mm:ss"
     * Note: if you see Screen sharing: inactive, Remote shell: inactive, and an up-arrow next to the Version, follow the “Initial Setup” instructions above 
 2. Click “Connect via” in the top right corner and select one of the following: 
     * “Screen sharing” to open a window with the Raspberry Pi’s screen allowing you to control it as if you’re using it 
-    * “Remote shell” if you simply need to run terminal commands on the Raspberry Pi 
+    * “Remote shell” if you simply need to run terminal commands on the Raspberry Pi
+### Live Camera Feed
+```
+rpicam-hello --timeout 0
+```
