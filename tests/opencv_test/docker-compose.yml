@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  yellow-tracker:
+    build: .
+    devices:
+      - /dev/video0:/dev/video0  # Grant access to camera
+    privileged: true  # Needed for camera access
+    environment:
+      - DISPLAY=${DISPLAY}  # For GUI windows
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix  # X11 socket for display
+    network_mode: host
