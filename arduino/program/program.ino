@@ -20,11 +20,10 @@ const int PIN_IN3     = 5;      // PWM speed (IN)  <-- must be PWM-capable
 
 
 // ---------- SUB-ROUTINES ----------
-void drive_motor(int motor, int cycles, int speed) {
-  /* Turn specified motor for given loop cycles at given speed
+void drive_motor(int motor, int speed) {
+  /* Turn specified motor at given speed
   PARAMETERS:
     motor: number of the motor to control (ex. 1 for motor1)
-    cycles: number of cycles in drive loop
     speed: speed at which to turn the motor:
       -255 = full reverse
       0 = stop
@@ -51,29 +50,21 @@ void drive_motor(int motor, int cycles, int speed) {
       Serial.println(motor);
       break;
   }
-  // ---------- DEBUG ----------
-  Serial.print("speed: ");
-  Serial.println(speed);
-  Serial.print("cycles: ");
-  Serial.println(cycles);
-  // ---------------------------
-  for (int i = 0; i < cycles; i++) {
-    // if stop
-    if (speed == 0) {
-      // Brake (fast stop): IN = 0
-      analogWrite(pin_in, 0);
-      // PHASE can be left as-is
-      return;
-    }
-    // if forward
-    if (speed > 0) {
-      digitalWrite(pin_phase, HIGH);     // forward
-      analogWrite(pin_in, speed);        // 1 to 255
-    // if reverse
-    } else {
-      digitalWrite(pin_phase, LOW);      // reverse
-      analogWrite(pin_in, -speed);       // 1 to 255
-    }
+  // if stop
+  if (speed == 0) {
+    // Brake (fast stop): IN = 0
+    analogWrite(pin_in, 0);
+    // PHASE can be left as-is
+    return;
+  }
+  // if forward
+  if (speed > 0) {
+    digitalWrite(pin_phase, HIGH);     // forward
+    analogWrite(pin_in, speed);        // 1 to 255
+  // if reverse
+  } else {
+    digitalWrite(pin_phase, LOW);      // reverse
+    analogWrite(pin_in, -speed);       // 1 to 255
   }
 }
 
@@ -108,15 +99,21 @@ void loop() {
     // Handle command
     if (cmd == "MOTOR1") {
       Serial.println("Turning motor 1...");
-      drive_motor(1, 100000, 255);
+      drive_motor(1, 255);
+      delay(10000);
+      drive_motor(1, 0);
       Serial.println("Turned motor 1");
     } else if (cmd == "MOTOR2") {
       Serial.println("Turning motor 2...");
-      drive_motor(2, 100000, 255);
+      drive_motor(2, 255);
+      delay(10000);
+      drive_motor(2, 0);
       Serial.println("Turned motor 2");
     } else if (cmd == "MOTOR3") {
       Serial.println("Turning motor 3...");
-      drive_motor(3, 100000, 255);
+      drive_motor(3, 255);
+      delay(10000);
+      drive_motor(3, 0);
       Serial.println("Turned motor 3");
     } else {
       Serial.print("Unknown command: ");
