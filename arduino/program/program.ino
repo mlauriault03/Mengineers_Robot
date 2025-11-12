@@ -15,8 +15,10 @@ const int PIN_IN3     = 5;      // PWM speed (IN)  <-- must be PWM-capable
 
 
 // ---------- COMMANDS ----------
-// TODO
-
+const String MOTOR1 = "MOTOR1";
+const String MOTOR2 = "MOTOR2";
+const String MOTOR3 = "MOTOR3";
+// (Add more commands as needed...)
 
 
 // ---------- SUB-ROUTINES ----------
@@ -97,19 +99,19 @@ void loop() {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
     // Handle command
-    if (cmd == "MOTOR1") {
+    if (cmd == MOTOR1) {
       Serial.println("Turning motor 1...");
       drive_motor(1, 255);
       delay(10000);
       drive_motor(1, 0);
       Serial.println("Turned motor 1");
-    } else if (cmd == "MOTOR2") {
+    } else if (cmd == MOTOR2) {
       Serial.println("Turning motor 2...");
       drive_motor(2, 255);
       delay(10000);
       drive_motor(2, 0);
       Serial.println("Turned motor 2");
-    } else if (cmd == "MOTOR3") {
+    } else if (cmd == MOTOR3) {
       Serial.println("Turning motor 3...");
       drive_motor(3, 255);
       delay(10000);
