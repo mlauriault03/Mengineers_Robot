@@ -4,15 +4,23 @@
 # PUBLIC LIBRARIES
 from enum import Enum
 from threading import Thread
-# TODO add servo control library
-# TODO add drone library
+import pigpio
+import time
+# TODO add drone control library
+
+# PRIVATE LIBRARIES
+from encoder import Encoder
+from servo import Servo
+from drive_wheel import DriveWheel
 
 
 # PARAMETERS
 PIN_LEFT_SERVO      = 0
 PIN_RIGHT_SERVO     = 0
-PIN_LEFT_ENCODER    = 0
-PIN_RIGHT_ENCODER   = 0
+PIN_LEFT_ENC_A      = 0
+PIN_LEFT_ENC_B      = 0
+PIN_RIGHT_ENC_A     = 0
+PIN_RIGHT_ENC_B     = 0
 
 
 # DATA STRUCTURES
@@ -28,73 +36,80 @@ class State(Enum):
     RETURNING = 8           # Returning to starting area
 
 
-# GLOBAL VARIABLES
-state: State = None         # Current state of the robot
+# ROBOT
 
+class Robot:
+    def __init__(self):
+        self.state = State.STOPPED
+        self.pi = pigpio.pi()
 
-# LISTENER HANDLERS
-def left_encoder_listener():
-    pass
-def right_encoder_listener():
-    pass
+        # Hardware objects
+        self.left_enc = Encoder(self.pi, PIN_LEFT_ENC_A, PIN_LEFT_ENC_B)
+        self.right_enc = Encoder(self.pi, PIN_RIGHT_ENC_A, PIN_RIGHT_ENC_B)
+        self.left_servo = Servo(self.pi, PIN_LEFT_SERVO)
+        self.right_servo = Servo(self.pi, PIN_RIGHT_SERVO)
 
+        # Drive wheels (PID controlled)
+        self.left_wheel = DriveWheel(self.left_servo, self.left_enc)
+        self.right_wheel = DriveWheel(self.right_servo, self.right_enc)
 
-# LISTENER THREADS
-# TODO: implement sensor and input listener threads
-left_encoder_thread = Thread(target=left_encoder_listener)
-right_encoder_thread = Thread(target=right_encoder_listener)
+    def update_state(self):
+        """State Machine Logic"""
+        if self.state == State.STOPPED:
+            self.stop()
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.MOVING:
+            # TODO: navigation logic (use PID controller for each drive motor)
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.CRANK:
+            self.stop()
+            # TODO: send command to Arduino via pyserial to turn motor
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.KEYPAD:
+            self.stop()
+            # TODO: send command to Arduino via pyserial to turn motor
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.BUTTON:
+            # TODO: run into the button
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.DUCK:
+            self.stop()
+            # TODO: send command to Arduino via pyserial to turn motor
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.DRONE:
+            self.stop()
+            # TODO: send commands to drone
+            # TODO: change state based on sensor inputs
+            pass
+        elif self.state == State.RETURNING:
+            # TODO: return to starting area
+            # TODO: change state based on sensor inputs
+            pass
+        else:
+            # TODO unknown state
+            pass
 
-
-# State Machine Logic
-def update_state():
-    if state == State.STOPPED:
-        # TODO: set speed of both drive motors to zero
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.MOVING:
-        # TODO: navigation logic (use PID controller for each drive motor)
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.CRANK:
-        # TODO: send command to Arduino via pyserial to turn motor
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.KEYPAD:
-        # TODO: send command to Arduino via pyserial to turn motor
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.BUTTON:
-        # TODO: run into the button
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.DUCK:
-        # TODO: send command to Arduino via pyserial to turn motor
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.DRONE:
-        # TODO: send commands to drone
-        # TODO: change state based on sensor inputs
-        pass
-    elif state == State.RETURNING:
-        # TODO: return to starting area
-        # TODO: change state based on sensor inputs
-        pass
-    else:
-        # TODO unknown state
-        pass
+    def stop(self):
+        """Stop both drive wheels."""
+        self.left_wheel.stop()
+        self.right_wheel.stop()
 
 
 # Main program loop
 def main():
-    # Start listener threads
-    left_encoder_thread.start()
-    right_encoder_thread.start()
-    # Set initial state
-    state = State.STOPPED
+    robot = Robot()
     # State machine loop (main thread)
     while True:
-        # Update state
-        update_state()
+        robot.update_state()
+        robot.left_wheel.update()
+        robot.right_wheel.update()
+        time.sleep(0.01)
 
 
 # If this file is executed as a script
