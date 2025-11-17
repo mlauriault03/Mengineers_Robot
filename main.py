@@ -12,28 +12,30 @@ import time
 from encoder import Encoder
 from servo import Servo
 from drive_wheel import DriveWheel
+from arduino import Arduino, Command
 
 
 # PARAMETERS
-PIN_LEFT_SERVO      = 0
-PIN_RIGHT_SERVO     = 0
-PIN_LEFT_ENC_A      = 0
-PIN_LEFT_ENC_B      = 0
-PIN_RIGHT_ENC_A     = 0
-PIN_RIGHT_ENC_B     = 0
+PORT_ARDUINO    = '/dev/ttyACM0'
+PIN_LEFT_SERVO  = 0
+PIN_RIGHT_SERVO = 0
+PIN_LEFT_ENC_A  = 0
+PIN_LEFT_ENC_B  = 0
+PIN_RIGHT_ENC_A = 0
+PIN_RIGHT_ENC_B = 0
 
 
 # DATA STRUCTURES
 # Robot states for state machine
 class State(Enum):
-    STOPPED = 0             # Robot is stopped
-    MOVING = 1              # Robot is moving
-    CRANK = 2               # Turning crank paddle
-    KEYPAD = 3              # Turning keypad shaft
-    BUTTON = 4              # Running into button
-    DUCK = 5                # Knocking off duck
-    DRONE = 6               # Controlling drone
-    RETURNING = 8           # Returning to starting area
+    STOPPED     = 0     # Robot is stopped
+    MOVING      = 1     # Robot is moving
+    CRANK       = 2     # Turning crank paddle
+    KEYPAD      = 3     # Turning keypad shaft
+    BUTTON      = 4     # Running into button
+    DUCK        = 5     # Knocking off duck
+    DRONE       = 6     # Controlling drone
+    RETURNING   = 7     # Returning to starting area
 
 
 # ROBOT
@@ -42,6 +44,9 @@ class Robot:
     def __init__(self):
         self.state = State.STOPPED
         self.pi = pigpio.pi()
+
+        # Arduino communication
+        self.arduino = Arduino(PORT_ARDUINO, 9600)
 
         # Hardware objects
         self.left_enc = Encoder(self.pi, PIN_LEFT_ENC_A, PIN_LEFT_ENC_B)
@@ -62,16 +67,16 @@ class Robot:
         elif self.state == State.MOVING:
             # TODO: navigation logic (use PID controller for each drive motor)
             # TODO: change state based on sensor inputs
-            pass
+            pass    
         elif self.state == State.CRANK:
             self.stop()
-            # TODO: send command to Arduino via pyserial to turn motor
-            # TODO: change state based on sensor inputs
+            self.arduino.send_command(Command.MOTOR1)
+            # TODO: wait for reponse from Arduino -> then change state
             pass
         elif self.state == State.KEYPAD:
             self.stop()
-            # TODO: send command to Arduino via pyserial to turn motor
-            # TODO: change state based on sensor inputs
+            self.arduino.send_command(Command.MOTOR2)
+            # TODO: wait for reponse from Arduino -> then change state
             pass
         elif self.state == State.BUTTON:
             # TODO: run into the button
@@ -79,8 +84,8 @@ class Robot:
             pass
         elif self.state == State.DUCK:
             self.stop()
-            # TODO: send command to Arduino via pyserial to turn motor
-            # TODO: change state based on sensor inputs
+            self.arduino.send_command(Command.MOTOR3)
+            # TODO: wait for reponse from Arduino -> then change state
             pass
         elif self.state == State.DRONE:
             self.stop()
