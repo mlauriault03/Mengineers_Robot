@@ -2,27 +2,32 @@ import cv2
 from picamera2 import Picamera2
 
 picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(main={"format": "XRGB8888", "size": (640, 480)}))
 picam2.start()
 
-lower_yellow = (20, 100, 100)
-upper_yellow = (30, 255, 255)
-
-print("Tracking yellow objects. Press Ctrl+C to quit.")
+print("Press 'q' to quit.")
 
 try:
     while True:
         frame = picam2.capture_array()
-        hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (9, 9), 2)
         
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        circles = cv2.HoughCircles(blur, cv2.HOUGH_GRADIENT, dp=1, minDist=50,
+                                   param1=100, param2=30, minRadius=10, maxRadius=200)
         
-        if contours:
-            c = max(contours, key=cv2.contourArea)
-            area = cv2.contourArea(c)
-            if area > 500:
-                x, y, w, h = cv2.boundingRect(c)
-                cx, cy = x + w // 2, y + h // 2
-                print(f"Center: ({cx}, {cy}), Area: {int(area)}")
+        if circles is not None:
+            circles = circles[0].astype(int)
+            for (x, y, r) in circles:
+                cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
+                cv2.circle(frame, (x, y), 2, (0, 0, 255), 3)
+        
+        cv2.imshow('Circle Tracker', frame)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 except KeyboardInterrupt:
+    pass
+finally:
+    cv2.destroyAllWindows()
     picam2.stop()
