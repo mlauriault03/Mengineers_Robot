@@ -1,34 +1,26 @@
-import os
+import lgpio
 import time
 
-PWMCHIP = "/sys/class/pwm/pwmchip0"
-CHANNEL = 0
+CHIP = 0          # gpiochip0
+PIN = 12          # BCM 12 (PWM1_0)
 
-# Export the channel if needed
-if not os.path.exists(f"{PWMCHIP}/pwm{CHANNEL}"):
-    with open(f"{PWMCHIP}/export", "w") as f:
-        f.write(str(CHANNEL))
-    time.sleep(0.1)
+PWM_FREQUENCY = 500     # Hz
+DUTY_PERCENT = 50       # 50% duty
 
-# Set 50 Hz period (20 ms)
-with open(f"{PWMCHIP}/pwm{CHANNEL}/period", "w") as f:
-    f.write("20000000")  # 20 ms
+# Open controller instance
+h = lgpio.gpiochip_open(CHIP)
 
-# Enable PWM output
-with open(f"{PWMCHIP}/pwm{CHANNEL}/enable", "w") as f:
-    f.write("1")
+print(f"Starting PWM on GPIO{PIN} @ {PWM_FREQUENCY} Hz, {DUTY_PERCENT}% duty")
 
-# Sweep duty cycle from 5% to 10%
-print("Sweeping PWM duty cycle...")
-for duty_us in range(500, 2500, 100):
-    duty_ns = duty_us * 1000
-    with open(f"{PWMCHIP}/pwm{CHANNEL}/duty_cycle", "w") as f:
-        f.write(str(duty_ns))
-    print("Pulse:", duty_us, "us")
-    time.sleep(0.3)
+# Start PWM
+lgpio.tx_pwm(h, PIN, PWM_FREQUENCY, DUTY_PERCENT)
+print("50%")
+time.sleep(5)
 
-# Disable PWM
-with open(f"{PWMCHIP}/pwm{CHANNEL}/enable", "w") as f:
-    f.write("0")
+# Stop PWM
+lgpio.tx_pwm(h, PIN, PWM_FREQUENCY, 0)
+time.sleep(5)
 
-print("Done.")
+# Close the connection
+lgpio.gpiochip_close(h)
+print("PWM stopped.")
