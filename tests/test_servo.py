@@ -1,37 +1,27 @@
 # Continous Servo Motor Test
 # 11/3/25
 
-import pigpio
+
+# PUBLIC LIBRARIES
 import time
 from servo import Servo
 
+
+# TEST PARAMETERS
 SIGNAL_PIN = 12
 
 
-pi = pigpio.pi()
-servo = Servo(pi, SIGNAL_PIN)
+# MAIN TEST
+servo = Servo(pin=SIGNAL_PIN)
 
-try:
-    while True:
-        print("Moving forward")
-        servo.forward(0.5)
-        time.sleep(2)
+print("Moving forward")
+servo.forward(0.5)
+time.sleep(2)
 
-        print("Stopping")
-        servo.stop()
-        time.sleep(1)
+print("Reversing")
+servo.reverse(1.0)
+time.sleep(2)
 
-        print("Reversing")
-        servo.reverse(0.5)
-        time.sleep(2)
-
-        print("Stopping")
-        servo.stop()
-        time.sleep(1)
-
-except KeyboardInterrupt:
-    print("Exiting...")
-
-finally:
-    servo.shutdown()
-    pi.stop()
+print("Stopping")
+servo.stop()
+servo.shutdown()
