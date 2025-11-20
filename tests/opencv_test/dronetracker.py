@@ -1,6 +1,12 @@
 import cv2
 import math
+import sys
+import time
 from picamera2 import Picamera2
+from codrone_edu.drone import *
+
+drone = Drone()
+drone.pair()
 
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"format": "XRGB8888", "size": (640, 480)}))
@@ -23,7 +29,24 @@ upper_red1 = (10, 255, 255)
 lower_red2 = (170, 70, 70)
 upper_red2 = (180, 255, 255)
 
+# Store last known values
+last_distance = 0
+last_offset_x = 0
+last_offset_y = 0
+last_yaw = 0
+last_seen_time = time.time()
+
+# Control parameters
+CENTER_THRESHOLD = 30  # pixels - consider centered if within this
+LANDING_HEIGHT = 200   # mm - land when closer than this
+YAW_THRESHOLD = 10     # degrees
+LOST_TIMEOUT = 5       # seconds before landing
+EMERGENCY_TIMEOUT = 10 # seconds before emergency land
+
 print("Press 'q' to quit.")
+print("Taking off...")
+drone.takeoff()
+drone.hover(2)
 
 try:
     while True:
@@ -89,22 +112,71 @@ try:
                 yaw = math.degrees(math.atan2(rear_center_x - front_center_x, 
                                              front_center_y - rear_center_y))
                 
-                # Display info
-                cv2.putText(frame, f"Distance: {distance:.1f}mm", (10, 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                cv2.putText(frame, f"Offset X: {offset_x:.1f}px", (10, 60),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                cv2.putText(frame, f"Offset Y: {offset_y:.1f}px", (10, 90),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-                cv2.putText(frame, f"Yaw: {yaw:.1f}deg", (10, 120),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                # Update last known values
+                last_distance = distance
+                last_offset_x = offset_x
+                last_offset_y = offset_y
+                last_yaw = yaw
+                last_seen_time = time.time()
+        
+        # Always display last known values (even if tracking is lost)
+        cv2.putText(frame, f"Distance: {last_distance:.1f}mm", (10, 30),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, f"Offset X: {last_offset_x:.1f}px", (10, 60),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, f"Offset Y: {last_offset_y:.1f}px", (10, 90),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, f"Yaw: {last_yaw:.1f}deg", (10, 120),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # Print to CLI on same line
+        time_lost = time.time() - last_seen_time
+        sys.stdout.write(f"\rDist: {last_distance:.1f}mm | X: {last_offset_x:.1f}px | Y: {last_offset_y:.1f}px | Yaw: {last_yaw:.1f}° | Lost: {time_lost:.1f}s ")
+        sys.stdout.flush()
+        
+        # Check if lost for too long
+        if time_lost > EMERGENCY_TIMEOUT:
+            print("\nLost target for 10s - Emergency landing!")
+            drone.emergency_stop()
+            break
+        elif time_lost > LOST_TIMEOUT:
+            print("\nLost target for 5s - Landing...")
+            drone.land()
+            break
+        
+        # Control drone to center over camera
+        if last_distance > 0 and time_lost < 1:
+            # Check if centered and at landing height
+            centered = abs(last_offset_x) < CENTER_THRESHOLD and abs(last_offset_y) < CENTER_THRESHOLD
+            aligned = abs(last_yaw) < YAW_THRESHOLD
+            
+            if centered and aligned and last_distance < LANDING_HEIGHT:
+                print("\nCentered and low - Landing...")
+                drone.land()
+                break
+            
+            # Convert pixel offsets to movement distances (rough calibration)
+            # Positive offset_x = drone is to the right, need to move left (negative)
+            # Positive offset_y = drone is above center, need to move forward (positive pitch)
+            move_right = int(last_offset_x * 0.1)  # pixels to cm
+            move_forward = int(last_offset_y * 0.1)
+            
+            # Rotate to align
+            if abs(last_yaw) > YAW_THRESHOLD:
+                drone.turn_degree(int(-last_yaw))
+            
+            # Move to center
+            if abs(last_offset_x) > CENTER_THRESHOLD or abs(last_offset_y) > CENTER_THRESHOLD:
+                drone.move(0.5, move_right, move_forward, 0, 0)
         
         cv2.imshow('LED Tracker', frame)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 except KeyboardInterrupt:
-    pass
+    print("\nStopping...")
 finally:
+    drone.land()
+    drone.close()
     cv2.destroyAllWindows()
     picam2.stop()
