@@ -1,0 +1,33 @@
+from codrone_edu.drone import *
+import time
+
+print("Connecting to CoDrone...")
+d = Drone()
+d.pair()
+print("Connected!")
+# d.set_drone_LED(d.get_front_color("rgb")[0],d.get_front_color("rgb")[1],d.get_front_color("rgb")[2],255)
+# print("color is "+ d.get_front_color("name"))
+d.takeoff()
+# d.send_absolute_position(0,1,1,0.5,0,0)
+time.sleep(5)
+# print("returning")
+# d.send_absolute_position(0,0,1,0.5,0,0)
+# time.sleep(1)
+# print("lowering")
+# d.land()
+# color=d.get_front_color()
+# while(color != "red"):
+# 	d.takeoff()
+# 	print("color is "+ color )
+# 	d.send_absolute_position(0,0,0.4,0.5,0,0)
+# 	time.sleep(1)
+# 	d.land()
+# 	d.get_front_color()
+#d.hover(1)
+# d.flip("front")
+# d.hover(5)
+print("landing")
+d.land()
+d.close()
+
+print("Done.")
