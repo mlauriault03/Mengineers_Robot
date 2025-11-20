@@ -3,98 +3,115 @@
 
 
 # PUBLIC LIBRARIES
+import lgpio
+import threading
 import time
-import os
 
 
-class HardwarePWM:
-    """
-    Simple wrapper around /sys/class/pwm PWM interface.
-    Uses pwmchip0 for Raspberry Pi 5 (GPIO12/13).
-    """
-
-    def __init__(self, chip: int, channel: int):
-        self.chip = chip
-        self.channel = channel
-        self.base = f"/sys/class/pwm/pwmchip{chip}"
-        self.path = f"{self.base}/pwm{channel}"
-
-        # Export PWM channel if needed
-        if not os.path.exists(self.path):
-            with open(f"{self.base}/export", "w") as f:
-                f.write(str(channel))
-            time.sleep(0.1)  # allow sysfs to populate
-
-    def enable(self, value: bool):
-        with open(f"{self.path}/enable", "w") as f:
-            f.write("1" if value else "0")
-
-    def set_period(self, period_ns: int):
-        with open(f"{self.path}/period", "w") as f:
-            f.write(str(period_ns))
-
-    def set_duty(self, duty_ns: int):
-        with open(f"{self.path}/duty_cycle", "w") as f:
-            f.write(str(duty_ns))
-
-    def shutdown(self):
-        self.enable(False)
-        # Optional: unexport
-        try:
-            with open(f"{self.base}/unexport", "w") as f:
-                f.write(str(self.channel))
-        except:
-            pass
 
 class Servo:
     """
-    Continuous Servo Control for Raspberry Pi 5 using hardware PWM.
-    GPIO12 = PWM0 channel 0  (default recommended)
+    Continuous Servo Controller for Raspberry Pi 5 using lgpio.
+    
+    Speed range:
+        -1.0 = full reverse
+         0.0 = stop
+        +1.0 = full forward
     """
 
-    def __init__(self, pin: int,
-        min_us:  int = 1000,   # full reverse
-        max_us:  int = 2000,   # full forward
-        stop_us: int = 1500    # neutral/stop
+    # CONSTANTS
+    
+    PERIOD = 20000  # [us] 20ms period for 50 Hz
+
+
+    # CONSTRUCTOR
+
+    def __init__(self, pin: int, chip: int = 0,
+        pulse_reverse: int = 1000,  # [us] full speed reverse
+        pulse_forward: int = 2000,  # [us] full speed forward
+        pulse_neutral: int = 1500   # [us] neutral/stop
     ):
+        # Initialize servo parameters
+        self.chip = chip
+        self.pin = pin
+        self.pulse_reverse = pulse_reverse
+        self.pulse_forward = pulse_forward
+        self.pulse_neutral = pulse_neutral
+
+        # Validate pin
         if pin != 12 and pin != 13:
             raise ValueError("Servo must use GPIO12 or GPIO13 on Raspberry Pi 5 (hardware PWM).")
+        
+        # PWM parameters
+        self._speed = 0.0
+        self._running = True
+        self._lock = threading.Lock()
 
-        # Map GPIO to correct PWM channel
-        # GPIO12 → pwmchip0/pwm0
-        # GPIO13 → pwmchip0/pwm1
-        channel = 0 if pin == 12 else 1
+        # Claim hardware
+        self.h = lgpio.gpiochip_open(chip)
+        lgpio.gpio_claim_output(self.h, pin)
 
-        self.pwm = HardwarePWM(chip=0, channel=channel)
+        # Start the worker thread
+        self.thread = threading.Thread(target=self._pulse_worker, daemon=True)
+        self.thread.start()
 
-        # PWM frequency for servos: 50 Hz → 20 ms → 20,000,000 ns
-        self.period_ns = 20_000_000
-        self.pwm.set_period(self.period_ns)
+    
+    # PRIVATE METHODS
 
-        self.min_us = min_us
-        self.max_us = max_us
-        self.stop_us = stop_us
+    def _speed_to_pulse(self, speed):
+        """Convert -1..+1 speed to pulse width."""
+        if speed > 1.0:  speed = 1.0
+        if speed < -1.0: speed = -1.0
+        if speed > 0:
+            return self.pulse_neutral + speed * (self.pulse_forward - self.pulse_neutral)
+        else:
+            return self.pulse_neutral + speed * (self.pulse_neutral - self.pulse_reverse)
 
-        # Start with servo stopped
-        self.stop()
-        self.pwm.enable(True)
+    def _pulse_worker(self):
+        """Thread that outputs 50 Hz servo pulses indefinitely."""
+        while self._running:
+            with self._lock:
+                pulse = int(self._speed_to_pulse(self._speed))
+            # High for pulse µs, then low for rest of 20ms
+            lgpio.tx_pulse(self.h, self.pin, pulse, self.PERIOD - pulse)
+            # Sleep 20ms to maintain 50 Hz
+            time.sleep(0.020)
 
-    def pulse(self, width_us: int):
-        width_ns = width_us * 1000
-        self.pwm.set_duty(width_ns)
+
+    # PUBLIC METHODS
+
+    def set_speed(self, speed):
+        """
+        Set servo speed in range [-1, 1].
+        - 1   full forward
+        - 0   stop
+        - -1  full reverse
+        """
+        with self._lock:
+            self._speed = float(speed)
 
     def stop(self):
-        self.pulse(self.stop_us)
-
-    def forward(self, speed: float):
-        speed = max(0.0, min(1.0, speed))
-        width = self.stop_us + speed * (self.max_us - self.stop_us)
-        self.pulse(int(width))
-
-    def reverse(self, speed: float):
-        speed = max(0.0, min(1.0, speed))
-        width = self.stop_us - speed * (self.stop_us - self.min_us)
-        self.pulse(int(width))
+        """Stop the servo and hold neutral."""
+        self.set_speed(0.0)
 
     def shutdown(self):
-        self.pwm.shutdown()
+        """Clean up thread and GPIO."""
+        self._running = False
+        self.thread.join()
+        self.stop()
+
+        # Send a few neutral pulses to settle
+        for _ in range(5):
+            lgpio.tx_pulse(self.h, self.pin, self.pulse_neutral, self.PERIOD - self.pulse_neutral)
+            time.sleep(0.02)
+        # Close chip controller
+        lgpio.gpiochip_close(self.h)
+
+    
+    # DESTRUCTOR
+
+    def __del__(self):
+        try:
+            self.shutdown()
+        except:
+            pass
