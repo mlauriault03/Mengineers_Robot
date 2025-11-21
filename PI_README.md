@@ -1,8 +1,10 @@
 # Raspberry Pi Documentation
 
-## Security Info 
 
-Keyring: admin 
+## Credentials
+
+**Keyring:** admin
+
 
 ## Setup 
 
@@ -44,9 +46,9 @@ sudo apt update
 sudo apt upgrade -y 
 cd /home/admin 
 git clone https://github.com/mlauriault03/Mengineers_Robot 
-cd Mengineers_Robot 
-git pull 
+cd Mengineers_Robot
 ```
+
 
 ## Raspberry Pi Connect 
 
@@ -71,7 +73,44 @@ sudo date -s "YYYY-MM-DD hh:mm:ss"
 2. Click “Connect via” in the top right corner and select one of the following: 
     * “Screen sharing” to open a window with the Raspberry Pi’s screen allowing you to control it as if you’re using it 
     * “Remote shell” if you simply need to run terminal commands on the Raspberry Pi
-### Live Camera Feed
+
+
+## Live Camera Feed
+
+Run the following command:
 ```
 rpicam-hello --timeout 0
 ```
+
+
+## Problem-Solution Log
+
+### Package Management
+
+#### 1. `sudo apt update`
+* **Error Message:** “...Verifying signature: Not live until ...”
+* **Solution:** `sudo date -s "YYYY-MM-DD hh:mm:ss"` (adjust the string with the actual date and time)
+#### 2. `pip install [package]`
+* **Error messsage:** "...This environment is externally managed..."
+* **Solution:** `pip install --break-system-packages [package]`
+
+### GPIO Pins
+
+#### 1. PWM Output
+* **Solution:**
+    1. Install `lgpio` module (Note: `pigpio` python module is NOT supported on Raspberry Pi 5):
+        ```
+        sudo apt install python3-lgpio
+        ```
+    2. Confirm PWM overlay is enabled:
+        ```
+        cat /boot/firmware/config.txt | grep pwm
+        ```
+        If you don't see `dtoverlay=pwm` in the output, then run:
+        ```
+        sudo nano /boot/firmware/config.txt
+        ```
+        and add `dtoverlay=pwm` to the bottom underneath the `[all]` section, then press Ctrl+S and Ctrl+X to save and exit the nano editor. Finally, run `sudo reboot`.
+    3. See [working PWM test code](tests/test_pwm.py)
+#### 2. Digital Output
+* **Solution:** see [working GPIO test code](tests/test_gpio.py)
