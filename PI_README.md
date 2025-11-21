@@ -98,7 +98,7 @@ rpicam-hello --timeout 0
 
 #### 1. PWM Output
 * **Solution:**
-    1. Install `lgpio` module (Note: `pigpio` python module is NOT supported on Raspberry Pi 5):
+    1. Install `lgpio` python module (Note: `pigpio` python module is NOT supported on Raspberry Pi 5):
         ```
         sudo apt install python3-lgpio
         ```
@@ -110,7 +110,10 @@ rpicam-hello --timeout 0
         ```
         sudo nano /boot/firmware/config.txt
         ```
-        and add `dtoverlay=pwm` to the bottom underneath the `[all]` section, then press Ctrl+S and Ctrl+X to save and exit the nano editor. Finally, run `sudo reboot`.
+        and add `dtoverlay=pwm` to the bottom underneath the `[all]` section, then press Ctrl+S and Ctrl+X to save and exit the nano editor. Finally, run:
+        ```
+        sudo reboot
+        ```
     3. See [working PWM test code](tests/test_pwm.py)
 #### 2. Digital Output
 * **Solution:** see [working GPIO test code](tests/test_gpio.py)
