@@ -4,7 +4,6 @@
 # PUBLIC LIBRARIES
 from enum import Enum
 from threading import Thread
-import pigpio
 import time
 # TODO add drone control library
 
@@ -17,12 +16,10 @@ from arduino import Arduino, Command
 
 # PARAMETERS
 PORT_ARDUINO    = '/dev/ttyACM0'
-PIN_LEFT_SERVO  = 0
-PIN_RIGHT_SERVO = 0
-PIN_LEFT_ENC_A  = 0
-PIN_LEFT_ENC_B  = 0
-PIN_RIGHT_ENC_A = 0
-PIN_RIGHT_ENC_B = 0
+PIN_SERVO_LEFT  = 12    # GPIO12 (PWM0)
+PIN_SERVO_RIGHT = 13    # GPIO13 (PWM1)
+ADDR_ENC_LEFT   = 0x36  # A0=LOW, A1=LOW
+ADDR_ENC_RIGHT  = 0x37  # A0=LOW, A1=HIGH
 
 
 # DATA STRUCTURES
@@ -43,16 +40,15 @@ class State(Enum):
 class Robot:
     def __init__(self):
         self.state = State.STOPPED
-        self.pi = pigpio.pi()
 
         # Arduino communication
         self.arduino = Arduino(PORT_ARDUINO, 9600)
 
         # Hardware objects
-        self.left_enc = Encoder(self.pi, PIN_LEFT_ENC_A, PIN_LEFT_ENC_B)
-        self.right_enc = Encoder(self.pi, PIN_RIGHT_ENC_A, PIN_RIGHT_ENC_B)
-        self.left_servo = Servo(self.pi, PIN_LEFT_SERVO)
-        self.right_servo = Servo(self.pi, PIN_RIGHT_SERVO)
+        self.left_enc = Encoder(ADDR_ENC_LEFT)
+        self.right_enc = Encoder(ADDR_ENC_RIGHT)
+        self.left_servo = Servo(PIN_SERVO_LEFT)
+        self.right_servo = Servo(PIN_SERVO_RIGHT)
 
         # Drive wheels (PID controlled)
         self.left_wheel = DriveWheel(self.left_servo, self.left_enc)

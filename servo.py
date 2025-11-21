@@ -15,8 +15,8 @@ class Servo:
     
     Speed range:
         -1.0 = full reverse
-         0.0 = stop
-        +1.0 = full forward
+        0.0 = stop
+        1.0 = full forward
     """
 
     # CONSTANTS
@@ -83,9 +83,9 @@ class Servo:
     def set_speed(self, speed):
         """
         Set servo speed in range [-1, 1].
-        - 1   full forward
-        - 0   stop
-        - -1  full reverse
+            -1 = full reverse
+            0 = stop
+            1 = full forward
         """
         with self._lock:
             self._speed = float(speed)
