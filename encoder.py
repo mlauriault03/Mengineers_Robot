@@ -3,69 +3,104 @@
 
 
 # PUBLIC LIBRARIES
-import pigpio
+import time
+import threading
+import board
+import busio
+from adafruit_seesaw import seesaw, rotaryio
 
 
 class Encoder:
-    def __init__(self, pi: pigpio.pi, pin_a: int, pin_b: int):
-        self.pi = pi
-        self.pin_a = pin_a
-        self.pin_b = pin_b
+    """
+    Adafruit I2C Rotary Encoder Interface
+    Provides:
+      - position (counts)
+      - velocity (counts/sec)
+      - optional threaded polling
+    """
 
-        self.position = 0
+    DEFAULT_ADDR = 0x36
+    DEFAULT_RATE_HZ = 200   # polling frequency (5 ms)
 
-        # Configure pins
-        self.pi.set_mode(self.pin_a, pigpio.INPUT)
-        self.pi.set_mode(self.pin_b, pigpio.INPUT)
-        self.pi.set_pull_up_down(self.pin_a, pigpio.PUD_UP)
-        self.pi.set_pull_up_down(self.pin_b, pigpio.PUD_UP)
+    def __init__(self, address: int = DEFAULT_ADDR, rate_hz: int = DEFAULT_RATE_HZ):
+        # Allow user to pass an I2C bus or create one
+        self.i2c = busio.I2C(board.SCL, board.SDA)
+        self.ss = seesaw.Seesaw(self.i2c, addr=address)
+        self.encoder = rotaryio.IncrementalEncoder(self.ss)
 
-        # Register callbacks
-        self.cb_a = self.pi.callback(self.pin_a, pigpio.EITHER_EDGE, self._decode)
-        self.cb_b = self.pi.callback(self.pin_b, pigpio.EITHER_EDGE, self._decode)
+        # Thread state
+        self.rate_hz = rate_hz
+        self._running = False
+        self._thread = None
 
-        # Last states
-        self.last_a = self.pi.read(self.pin_a)
-        self.last_b = self.pi.read(self.pin_b)
+        # Data
+        self._position = 0
+        self._velocity = 0.0
+        self._last_position = 0
+        self._last_time = time.time()
 
-    def _decode(self, gpio, level, tick):
-        """
-        Decode quadrature transitions.
-        This method is automatically called on every edge.
-        """
-        a = self.pi.read(self.pin_a)
-        b = self.pi.read(self.pin_b)
+        # Lock for thread-safe access
+        self._lock = threading.Lock()
 
-        # Determine direction
-        if gpio == self.pin_a:
-            if level == 1:  # rising edge on A
-                self.position += 1 if b == 0 else -1
-            else:           # falling edge on A
-                self.position += -1 if b == 0 else 1
 
-        elif gpio == self.pin_b:
-            if level == 1:  # rising edge on B
-                self.position += -1 if a == 0 else 1
-            else:           # falling edge on B
-                self.position += 1 if a == 0 else -1
+    # PUBLIC METHODS
 
-        # Save last state
-        self.last_a = a
-        self.last_b = b
-
-    # -----------------------
-    # Public API
-    # -----------------------
-
-    def get_position(self):
-        """Return current encoder tick count."""
-        return self.position
-
-    def reset(self):
-        """Zero the encoder count."""
-        self.position = 0
+    def start(self):
+        """Start background polling thread."""
+        if not self._running:
+            self._running = True
+            self._thread = threading.Thread(target=self._update_loop, daemon=True)
+            self._thread.start()
 
     def stop(self):
-        """Cleanly stop encoder callbacks."""
-        self.cb_a.cancel()
-        self.cb_b.cancel()
+        """Stop background thread."""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=0.5)
+
+    def reset(self):
+        """Reset position to zero."""
+        with self._lock:
+            # Seesaw allows writing a new position
+            self.encoder.position = 0
+            self._position = 0
+            self._velocity = 0.0
+            self._last_position = 0
+            self._last_time = time.time()
+
+    def get_position(self):
+        """Returns encoder count (thread-safe)."""
+        with self._lock:
+            return self._position
+
+    def get_velocity(self):
+        """Returns velocity (counts/sec)."""
+        with self._lock:
+            return self._velocity
+
+
+    # PRIVATE METHODS
+
+    def _update_loop(self):
+        period = 1.0 / self.rate_hz
+
+        # Initialize last values
+        self._last_position = self.encoder.position
+        self._last_time = time.time()
+
+        while self._running:
+            now = time.time()
+            pos = self.encoder.position
+
+            dt = now - self._last_time
+            dp = pos - self._last_position
+
+            vel = dp / dt if dt > 1e-6 else 0.0
+
+            with self._lock:
+                self._position = pos
+                self._velocity = vel
+
+            self._last_position = pos
+            self._last_time = now
+            time.sleep(period)

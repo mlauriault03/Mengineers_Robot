@@ -10,7 +10,7 @@ from adafruit_seesaw import seesaw, rotaryio
 
 
 # PRIVATE LIBRARIES
-# from encoder import Encoder
+from encoder import Encoder
 
 
 # PARAMETERS
@@ -42,10 +42,23 @@ def test1():
 
 def test2():
     """Test custom Encoder library"""
-    # TODO
-    pass
+    print("Initializing Encoder...")
+    enc = Encoder(address=I2C_ADDR)
+    enc.start()
+
+    print("Encoder initialized. Rotate the knob.\n")
+
+    try:
+        while True:
+            pos = enc.get_position()
+            vel = enc.get_velocity()
+            print(f"Position: {pos}, Velocity: {vel:.2f} counts/sec")
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        enc.stop()
+        print("Test ended.")
 
 
 # If this file is run as a script
 if __name__ == "__main__":
-    test1()
+    test2()
