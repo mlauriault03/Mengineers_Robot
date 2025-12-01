@@ -1,10 +1,6 @@
 import cv2
 import math
 from picamera2 import Picamera2
-from codrone_edu.drone import *
-
-drone = Drone()
-drone.pair()
 
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"format": "XRGB8888", "size": (640, 480)}))
@@ -15,19 +11,14 @@ FOCAL_LENGTH = 3.04
 SENSOR_WIDTH = 3.68
 IMAGE_WIDTH = 640
 
-lower_green = (80, 60, 135)
+lower_green = (80, 90, 135)
 upper_green = (100, 255, 255)
-lower_red1 = (0, 60, 70)
+lower_red1 = (0, 70, 70)
 upper_red1 = (10, 255, 255)
-lower_red2 = (170, 60, 70)
+lower_red2 = (170, 70, 70)
 upper_red2 = (180, 255, 255)
 
 print("Press 'q' to quit")
-print("Taking off...")
-drone.takeoff()
-drone.hover(2)
-drone.send_absolute_position( 0.2,0,0.5, 0.5, 0,0)
-drone.send_absolute_position( 0,0,0.5, 0.5, 0,0)
 
 while True:
     frame = picam2.capture_array()
@@ -91,8 +82,5 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-print("Landing...")
-drone.land()
-drone.close()
 cv2.destroyAllWindows()
 picam2.stop()
