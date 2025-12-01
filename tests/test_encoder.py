@@ -6,7 +6,7 @@
 import time
 import board
 import busio
-from adafruit_seesaw.seesaw import Seesaw
+from adafruit_seesaw import seesaw, rotaryio
 
 
 # PRIVATE LIBRARIES
@@ -23,19 +23,17 @@ def test1():
     i2c = busio.I2C(board.SCL, board.SDA)
 
     print("Connecting to encoder...")
-    ss = Seesaw(i2c, addr=I2C_ADDR)
+    ss = seesaw.Seesaw(i2c, addr=I2C_ADDR)
 
-    # Enable encoder
-    ss.encoder_enable()
-    ss.set_encoder_position(0)
+    # Create encoder object
+    enc = rotaryio.IncrementalEncoder(ss)
 
-    print("Encoder initialized.")
-    print("Rotate the knob. Press Ctrl+C to exit.\n")
+    print("Encoder initialized. Rotate the knob.\n")
 
-    last = ss.encoder_position
+    last = enc.position
 
     while True:
-        pos = ss.encoder_position
+        pos = enc.position
         if pos != last:
             print(f"Position: {pos}")
             last = pos
