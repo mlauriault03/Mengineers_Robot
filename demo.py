@@ -77,10 +77,30 @@ def demo():
     left_servo.shutdown()
     right_servo.shutdown()
 
-    # Turn motor 3 on Arduino
-    print("Activating motor 3 on Arduino...")
+    # Wait for user input to proceed
+    input("Press any key to continue to keypad...")
+
+    # Turn motor 2 (keypad)
+    print("Activating motor 2 (keypad) through Arduino...")
+    arduino.send_command(Command.MOTOR2)
+    time.sleep(10)
+
+    # Wait for user input to proceed
+    input("Press any key to continue to crank...")
+
+    # Turn motor 1 (crank)
+    print("Activating motor 1 (crank) through Arduino...")
+    arduino.send_command(Command.MOTOR1)
+    time.sleep(10)
+    
+    # Wait for user input to proceed
+    input("Press any key to continue to extender...")
+
+    # Turn motor 3 (extender)
+    print("Activating motor 3 (extender) through Arduino...")
     arduino.send_command(Command.MOTOR3)
-    time.sleep(5)
+    time.sleep(10)
+
     print("Demo complete.")
 
 
