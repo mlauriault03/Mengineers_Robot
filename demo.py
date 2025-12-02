@@ -6,7 +6,6 @@
 import time
 
 # PRIVATE LIBRARIES
-from encoder import Encoder
 from servo import Servo
 from arduino import Arduino, Command
 
@@ -14,8 +13,6 @@ from arduino import Arduino, Command
 PORT_ARDUINO    = '/dev/ttyACM0'
 PIN_SERVO_LEFT  = 13    # GPIO13 (PWM1)
 PIN_SERVO_RIGHT = 12    # GPIO12 (PWM0)
-ADDR_ENC_LEFT   = 0x36  # A0=LOW, A1=LOW
-ADDR_ENC_RIGHT  = 0x37  # A0=LOW, A1=HIGH
 
 
 # left forward = positive speed
@@ -28,8 +25,6 @@ def demo():
     arduino = Arduino(PORT_ARDUINO, 9600)
 
     # Hardware objects
-    #left_enc = Encoder(ADDR_ENC_LEFT)
-    #right_enc = Encoder(ADDR_ENC_RIGHT)
     left_servo = Servo(PIN_SERVO_LEFT)
     right_servo = Servo(PIN_SERVO_RIGHT)
 
