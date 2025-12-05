@@ -3,13 +3,9 @@
 
 # PUBLIC LIBRARIES
 from enum import Enum
-from threading import Thread
-import time
 # TODO add drone control library
 
 # PRIVATE LIBRARIES
-from encoder import Encoder
-from servo import Servo
 from drive_wheel import DriveWheel
 from arduino import Arduino, Command
 
@@ -20,6 +16,13 @@ PIN_SERVO_LEFT  = 13    # GPIO13 (PWM1)
 PIN_SERVO_RIGHT = 12    # GPIO12 (PWM0)
 ADDR_ENC_LEFT   = 0x37  # A0=HIGH, A1=LOW
 ADDR_ENC_RIGHT  = 0x36  # A0=LOW, A1=LOW
+
+# COORDINATES
+XY_START     = (0, 0)
+XY_KEYPAD    = (0, 0)
+XY_DUCK      = (0, 0)
+XY_BUTTON    = (0, 0)
+XY_CRANK     = (0, 0)
 
 
 
@@ -41,77 +44,122 @@ class State(Enum):
 class Robot:
     def __init__(self):
         self.state = State.STOPPED
-
         # Arduino communication
         self.arduino = Arduino(PORT_ARDUINO, 9600)
+        # Drive wheel controllers (PID controlled)
+        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT)
+        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT)
 
-        # Hardware objects
-        self.left_enc = Encoder(ADDR_ENC_LEFT)
-        self.right_enc = Encoder(ADDR_ENC_RIGHT)
-        self.left_servo = Servo(PIN_SERVO_LEFT)
-        self.right_servo = Servo(PIN_SERVO_RIGHT)
+    def start(self):
+        """Start robot systems."""
+        self.left_wheel.start()
+        self.right_wheel.start()
 
-        # Drive wheels (PID controlled)
-        self.left_wheel = DriveWheel(self.left_servo, self.left_enc)
-        self.right_wheel = DriveWheel(self.right_servo, self.right_enc)
-
-    def update_state(self):
-        """State Machine Logic"""
-        if self.state == State.STOPPED:
-            self.stop()
-            # TODO: change state based on sensor inputs
-            pass
-        elif self.state == State.MOVING:
-            # TODO: navigation logic (use PID controller for each drive motor)
-            # TODO: change state based on sensor inputs
-            pass    
-        elif self.state == State.CRANK:
-            self.stop()
-            self.arduino.send_command(Command.MOTOR1)
-            # TODO: wait for reponse from Arduino -> then change state
-            pass
-        elif self.state == State.KEYPAD:
-            self.stop()
-            self.arduino.send_command(Command.MOTOR2)
-            # TODO: wait for reponse from Arduino -> then change state
-            pass
-        elif self.state == State.BUTTON:
-            # TODO: run into the button
-            # TODO: change state based on sensor inputs
-            pass
-        elif self.state == State.DUCK:
-            self.stop()
-            self.arduino.send_command(Command.MOTOR3)
-            # TODO: wait for reponse from Arduino -> then change state
-            pass
-        elif self.state == State.DRONE:
-            self.stop()
-            # TODO: send commands to drone
-            # TODO: change state based on sensor inputs
-            pass
-        elif self.state == State.RETURNING:
-            # TODO: return to starting area
-            # TODO: change state based on sensor inputs
-            pass
-        else:
-            # TODO unknown state
-            pass
-
-    def stop(self):
-        """Stop both drive wheels."""
+    def shutdown(self):
+        """Shutdown robot systems."""
+        self.arduino.close()
         self.left_wheel.stop()
         self.right_wheel.stop()
 
 
-# Main program loop
+    # TASK PROCEDURES
+
+    def turn_crank(self):
+        """Execute crank procedure."""
+        self.state = State.CRANK
+        self.stop()
+        self.arduino.send_command(Command.MOTOR1)
+        # TODO: wait for reponse from Arduino -> then change state
+
+    def press_keypad(self):
+        """Execute keypad procedure."""
+        self.state = State.KEYPAD
+        self.stop()
+        self.arduino.send_command(Command.MOTOR2)
+        # TODO: wait for reponse from Arduino -> then change state
+
+    def push_button(self):
+        """Execute button procedure."""
+        self.state = State.BUTTON
+        self.stop()
+        # TODO: run into the button
+        # TODO: change state based on sensor inputs
+
+    def whack_duck(self):
+        """Execute duck procedure."""
+        self.state = State.DUCK
+        self.stop()
+        self.arduino.send_command(Command.MOTOR3)
+        # TODO: wait for reponse from Arduino -> then change state
+
+    def fly_drone(self):
+        """Execute drone procedure."""
+        self.state = State.DRONE
+        self.stop()
+        # TODO: send commands to drone
+        # TODO: change state based on sensor inputs
+
+
+    # MOVEMENT PROCEDURES
+
+    def move_to(self, xy_target: tuple[float, float]):
+        """Move robot to specified (x,y) location."""
+        self.state = State.MOVING
+        # TODO: implement navigation logic to move to (x, y) target
+    
+    def turn_by(self, angle_deg: float):
+        """Turn robot by specified angle (degrees)."""
+        self.state = State.MOVING
+        # TODO: implement turning logic
+
+    def stop(self):
+        """Stop both drive wheels."""
+        self.state = State.STOPPED
+        self.left_wheel.stop()
+        self.right_wheel.stop()
+
+    
+    # MAIN PROCEDURE
+
+    def run(self):
+        """Main robot procedure."""
+        # sense flash signal
+        # TODO
+        # backup to wall to align direction
+        # TODO
+        # move to keypad
+        self.move_to(XY_KEYPAD)
+        # press keypad
+        self.press_keypad()
+        # move to duck
+        self.move_to(XY_DUCK)
+        # whack duck
+        self.whack_duck()
+        # move to button
+        self.move_to(XY_BUTTON)
+        # push button
+        self.push_button()
+        # move to crank
+        self.move_to(XY_CRANK)
+        # turn crank
+        self.turn_crank()
+        # fly drone
+        self.fly_drone()
+        # return to start (go around other side of crater - extra points)
+        self.move_to(XY_START)
+        
+
+
+# Main Program
 def main():
+    # create robot instance
     robot = Robot()
-    # State machine loop (main thread)
-    while True:
-        robot.update_state()
-        robot.left_wheel.update()
-        robot.right_wheel.update()
-        time.sleep(0.01)
+    # start up
+    robot.start()
+    # run main procedure
+    robot.run()
+    # shut down
+    robot.shutdown()
 
 
 # If this file is executed as a script
