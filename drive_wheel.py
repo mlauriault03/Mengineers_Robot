@@ -4,6 +4,7 @@
 
 # PUBLIC LIBRARIES
 import time
+import threading
 
 
 # PRIVATE LIBRARIES
@@ -12,70 +13,117 @@ from servo import Servo
 
 
 
-class DriveWheel:
-    """
-    Combines a continuous servo + encoder + simple PID controller.
-    """
-
-    def __init__(self, servo: Servo, encoder: Encoder, kp=0.4, kd=0.0):
-        self.servo = servo
-        self.encoder = encoder
+class PID:
+    """Minimal PID controller for robotic control loops."""
+    def __init__(self, kp, ki, kd, output_min=-1.0, output_max=1.0):
         self.kp = kp
+        self.ki = ki
         self.kd = kd
+        self.out_min = output_min
+        self.out_max = output_max
 
-        self.target_pos = None
-        self.last_error = 0
+        self.integral = 0.0
+        self.last_error = 0.0
         self.last_time = time.time()
 
-    # -----------------------------
-    # Open-loop control
-    # -----------------------------
-    def set_speed(self, speed):
-        if speed > 0:
-            self.servo.forward(speed)
-        elif speed < 0:
-            self.servo.reverse(abs(speed))
-        else:
-            self.servo.stop()
+    def reset(self):
+        self.integral = 0.0
+        self.last_error = 0.0
+        self.last_time = time.time()
 
-    # -----------------------------
-    # Closed-loop position control
-    # -----------------------------
-    def go_to(self, target_pos):
-        """
-        Set a target encoder tick position.
-        """
-        self.target_pos = target_pos
-
-    def update(self):
-        """
-        Update PID loop. Call this every time Robot.update_state() runs.
-        """
-        if self.target_pos is None:
-            return
-
-        pos = self.encoder.get_position()
-        error = self.target_pos - pos
-
-        # Deadband
-        if abs(error) < 2:
-            self.servo.stop()
-            return
-
+    def update(self, target, current):
         now = time.time()
         dt = now - self.last_time
+        if dt <= 0:
+            dt = 1e-6
+
+        error = target - current
+
+        # PID components
+        p = self.kp * error
+        self.integral += error * dt
+        i = self.ki * self.integral
+        d = self.kd * (error - self.last_error) / dt
+
+        output = p + i + d
+
+        # Clamp output
+        output = max(self.out_min, min(self.out_max, output))
+
+        # Store
+        self.last_error = error
         self.last_time = now
 
-        derivative = (error - self.last_error) / dt if dt > 0 else 0
-        self.last_error = error
+        return output
 
-        cmd = self.kp * error + self.kd * derivative
 
-        # clamp output
-        cmd = max(-1.0, min(1.0, cmd))
+class DriveWheel:
+    """
+    Robot Drive Wheel Controller. Provides:
+    - Position control via PID
+    - Velocity and position sensing via Encoder
+    - Motor actuation via Servo
+    """
 
-        self.set_speed(cmd)
+    def __init__(self, servo_pin: int, encoder_addr: int, kp=0.5, ki=0.0, kd=0.05, rate_hz=100):
+        # Hardware control objects
+        self.servo = Servo(servo_pin)
+        self.encoder = Encoder(encoder_addr, rate_hz=rate_hz)
+        # PID controller
+        self.pid = PID(kp, ki, kd)
+        # Control state
+        self.target_position = 0.0
+        self.rate_hz = rate_hz
+        # Threading
+        self._running = False
+        self._thread = None
+        self._lock = threading.Lock()
+
+
+    # PUBLIC METHODS
+
+    def start(self):
+        self.encoder.start()
+        self._running = True
+        self._thread = threading.Thread(target=self._control_loop, daemon=True)
+        self._thread.start()
 
     def stop(self):
+        self._running = False
+        if self._thread:
+            self._thread.join()
         self.servo.stop()
-        self.target_pos = None
+        self.encoder.stop()
+
+    def shutdown(self):
+        self.stop()
+        self.servo.shutdown()
+
+    def set_target_position(self, pos):
+        with self._lock:
+            self.target_position = float(pos)
+            self.pid.reset()
+
+    def get_position(self):
+        return self.encoder.get_position()
+
+    def get_velocity(self):
+        return self.encoder.get_velocity()
+
+
+    # INTERNAL CONTROL LOOP
+
+    def _control_loop(self):
+        period = 1.0 / self.rate_hz
+        while self._running:
+            # Read encoder
+            current_pos = self.encoder.get_position()
+            # Get target safely
+            with self._lock:
+                target = self.target_position
+            # Compute PID speed command
+            speed_cmd = self.pid.update(target, current_pos)
+            # Output to motor
+            self.servo.set_speed(speed_cmd)
+            # Wait for next cycle
+            time.sleep(period)
