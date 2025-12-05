@@ -126,4 +126,8 @@ class DriveWheel:
             # Output to motor
             self.servo.set_speed(speed_cmd)
             # Wait for next cycle
+<<<<<<< HEAD
             time.sleep(period)
+=======
+            time.sleep(period)
+>>>>>>> refs/remotes/origin/main
