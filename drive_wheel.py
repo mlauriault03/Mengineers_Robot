@@ -65,10 +65,10 @@ class DriveWheel:
     - Motor actuation via Servo
     """
 
-    def __init__(self, servo_pin: int, encoder_addr: int, kp=0.5, ki=0.0, kd=0.05, rate_hz=100):
+    def __init__(self, servo_pin: int, encoder_addr: int, kp=0.5, ki=0.0, kd=0.0, rate_hz=100):
         # Hardware control objects
         self.servo = Servo(servo_pin)
-        self.encoder = Encoder(encoder_addr, rate_hz=rate_hz)
+        self.encoder = Encoder(encoder_addr, rate_hz)
         # PID controller
         self.pid = PID(kp, ki, kd)
         # Control state
@@ -123,7 +123,13 @@ class DriveWheel:
                 target = self.target_position
             # Compute PID speed command
             speed_cmd = self.pid.update(target, current_pos)
-            # Output to motor
-            self.servo.set_speed(speed_cmd)
+            # If error is within 1 encoder tick -> target reached
+            if abs(target - current_pos) < 1.0:
+                # Stop servo (error is as small as possible)
+                self.servo.set_speed(0.0)
+            # Otherwise keep trying to reduce error (reach target)
+            else:
+                # Set servo speed
+                self.servo.set_speed(speed_cmd)
             # Wait for next cycle
             time.sleep(period)

@@ -75,17 +75,17 @@ def demo():
     # Wait for user input to proceed
     input("Press any key to continue to keypad...")
 
-    # Turn motor 2 (keypad)
-    print("Activating motor 2 (keypad) through Arduino...")
-    arduino.send_command(Command.MOTOR2)
+    # Turn motor 1 (keypad)
+    print("Activating motor 1 (keypad) through Arduino...")
+    arduino.send_command(Command.MOTOR1)
     time.sleep(10)
 
     # Wait for user input to proceed
     input("Press any key to continue to crank...")
 
-    # Turn motor 1 (crank)
-    print("Activating motor 1 (crank) through Arduino...")
-    arduino.send_command(Command.MOTOR1)
+    # Turn motor 2 (crank)
+    print("Activating motor 2 (crank) through Arduino...")
+    arduino.send_command(Command.MOTOR2)
     time.sleep(10)
     
     # Wait for user input to proceed
