@@ -116,7 +116,7 @@ class Robot:
         # Calculate encoder ticks needed to travel the distance
         circumference = math.pi * DriveWheel.DIAMETER_IN    # circumference = pi * diameter
         rotations = distance_in / circumference             # rotations = distance / circumference
-        encoder_ticks = rotations * Encoder.TICKS_PER_REV    # ticks = rotations * (ticks/rotations)
+        encoder_ticks = rotations * Encoder.TICKS_PER_REV   # ticks = rotations * (ticks/rotations)
         # Set target position for both wheels (same absolute value)
         self.left_wheel.turn_by(encoder_ticks)
         self.right_wheel.turn_by(encoder_ticks)
@@ -128,7 +128,7 @@ class Robot:
                 break
             time.sleep(0.1)
     
-    def turn_by(self, angle_deg: float):
+    def turn(self, angle_deg: float):
         """Turn robot by specified angle in degrees."""
         self.state = State.MOVING
         # TODO: implement turning logic
@@ -149,7 +149,11 @@ class Robot:
         # backup to wall to align direction
         # TODO
         # move to keypad
-        # TODO use move_forward() and turn_by()
+        self.move_forward(12)
+        self.turn(90)
+        self.move_forward(29)
+        self.turn(-90)
+        self.move_forward(-4.5)
         # press keypad
         self.press_keypad()
         # move to duck
