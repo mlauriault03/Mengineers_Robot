@@ -10,9 +10,7 @@ from servo import Servo
 from arduino import Arduino, Command
 
 # PARAMETERS
-PORT_ARDUINO    = '/dev/ttyACM0'
-PIN_SERVO_LEFT  = 13    # GPIO13 (PWM1)
-PIN_SERVO_RIGHT = 12    # GPIO12 (PWM0)
+from main import PORT_ARDUINO, PIN_SERVO_LEFT, PIN_SERVO_RIGHT
 
 
 # left forward = positive speed

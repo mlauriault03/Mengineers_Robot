@@ -47,8 +47,8 @@ class Robot:
         # Arduino communication
         self.arduino = Arduino(PORT_ARDUINO, 9600)
         # Drive wheel controllers (PID controlled)
-        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT)
-        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT)
+        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1)
+        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1)
 
     def start(self):
         """Start robot systems."""

@@ -63,14 +63,32 @@ class DriveWheel:
     - Position control via PID
     - Velocity and position sensing via Encoder
     - Motor actuation via Servo
+    Parameters:
+    ----------
+    servo_pin : int
+        Servo GPIO pin number on the Raspberry PI
+    encoder_addr : int
+        Encoder I2C address
+    direction : int
+        Forward spin direction of wheel (1 = left wheel, -1 = right wheel)
+    kp : float
+        Proportional (P) gain coefficient
+    ki : float
+        Integral (I) gain coefficient
+    kd : float
+        Derivative (D) gain coefficient
+    rate_hz : int
+        Update rate in Hz
     """
 
-    def __init__(self, servo_pin: int, encoder_addr: int, kp=0.5, ki=0.0, kd=0.0, rate_hz=100):
+    def __init__(self, servo_pin: int, encoder_addr: int, direction=1, kp=0.5, ki=0.0, kd=0.0, rate_hz=100):
         # Hardware control objects
-        self.servo = Servo(servo_pin)
-        self.encoder = Encoder(encoder_addr, rate_hz)
+        self.servo = Servo(servo_pin, direction)
+        self.encoder = Encoder(encoder_addr, direction)
+        # Forward Spin Direction
+        self.direction = direction
         # PID controller
-        self.pid = PID(kp, ki, kd)
+        self.pid = PID(kp, ki, kd, -1.0, 1.0)
         # Control state
         self.target_position = 0.0
         self.rate_hz = rate_hz
@@ -127,9 +145,11 @@ class DriveWheel:
             if abs(target - current_pos) < 1.0:
                 # Stop servo (error is as small as possible)
                 self.servo.set_speed(0.0)
+                print("Target reached. Servo stopped.")
             # Otherwise keep trying to reduce error (reach target)
             else:
                 # Set servo speed
                 self.servo.set_speed(speed_cmd)
+                print(f"{'LEFT' if self.direction == 1 else 'RIGHT'}:\ttarget: {target}\tposition: {current_pos}\tspeed: {speed_cmd}\t")
             # Wait for next cycle
             time.sleep(period)

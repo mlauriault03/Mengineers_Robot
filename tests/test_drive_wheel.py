@@ -7,15 +7,34 @@ from drive_wheel import DriveWheel
 from main import PIN_SERVO_LEFT, PIN_SERVO_RIGHT, ADDR_ENC_LEFT, ADDR_ENC_RIGHT
 
 
+# PARAMETERS
+KP = 0.1
+TARGET_POS = 50
+
+
 def test1():
-    left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT)
-    right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT)
+    try:
+        left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1, KP)
+        right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1, KP)
 
-    left_wheel.start()
-    right_wheel.start()
+        left_wheel.set_target_position(TARGET_POS)
+        right_wheel.set_target_position(TARGET_POS)
 
-    left_wheel.set_target_position(500)
-    right_wheel.set_target_position(500)
+        print("Starting drive wheel...")
+
+        left_wheel.start()
+        right_wheel.start()
+
+        input("Press any key to end test...") # holds main thread so that control thread doesn't join
+    except Exception as e:
+        print(f"Error: {e.with_traceback()}")
+    finally:
+        print("Stopping...")
+        left_wheel.stop()
+        right_wheel.stop()
+        print("Shutting down...")
+        left_wheel.shutdown()
+        right_wheel.shutdown()
 
 
 # If this file is run as a script

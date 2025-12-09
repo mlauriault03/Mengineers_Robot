@@ -26,14 +26,15 @@ class Servo:
 
     # CONSTRUCTOR
 
-    def __init__(self, pin: int, chip: int = 0,
+    def __init__(self, pin: int, direction: int = 1, chip: int = 0,
         pulse_reverse: int = 1000,  # [us] full speed reverse
         pulse_forward: int = 2000,  # [us] full speed forward
         pulse_neutral: int = 1500   # [us] neutral/stop
     ):
         # Initialize servo parameters
-        self.chip = chip
         self.pin = pin
+        self.direction = direction
+        self.chip = chip
         self.pulse_reverse = pulse_reverse
         self.pulse_forward = pulse_forward
         self.pulse_neutral = pulse_neutral
@@ -88,7 +89,7 @@ class Servo:
             1 = full forward
         """
         with self._lock:
-            self._speed = float(speed)
+            self._speed = float(speed) * self.direction
 
     def stop(self):
         """Stop the servo and hold neutral."""
@@ -106,12 +107,3 @@ class Servo:
             time.sleep(0.02)
         # Close chip controller
         lgpio.gpiochip_close(self.h)
-
-    
-    # DESTRUCTOR
-
-    def __del__(self):
-        try:
-            self.shutdown()
-        except:
-            pass

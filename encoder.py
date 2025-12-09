@@ -22,7 +22,7 @@ class Encoder:
     DEFAULT_ADDR = 0x36
     DEFAULT_RATE_HZ = 200   # polling frequency (5 ms)
 
-    def __init__(self, address: int = DEFAULT_ADDR, rate_hz: int = DEFAULT_RATE_HZ):
+    def __init__(self, address: int = DEFAULT_ADDR, direction: int = 1, rate_hz: int = DEFAULT_RATE_HZ):
         # Allow user to pass an I2C bus or create one
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.ss = seesaw.Seesaw(self.i2c, addr=address)
