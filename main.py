@@ -25,14 +25,6 @@ KP = 0.5                # Proportional (P) gain
 KI = 0.0                # Integral (I) gain
 KD = 0.0                # Derivative (D) gain
 
-# COORDINATES
-XY_START     = (0, 0)
-XY_KEYPAD    = (0, 0)
-XY_DUCK      = (0, 0)
-XY_BUTTON    = (0, 0)
-XY_CRANK     = (0, 0)
-
-
 
 # DATA STRUCTURES
 # Robot states for state machine
@@ -175,7 +167,8 @@ class Robot:
         
 
 
-# Main Program
+# MAIN PROGRAM
+
 def main():
     # create robot instance
     robot = Robot()

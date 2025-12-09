@@ -84,6 +84,7 @@ class DriveWheel:
     # CONSTANTS
 
     DIAMETER_IN = 2.64          # Wheel diameter in inches
+    L_R_SPEED_RATIO = 0.9       # Left to right servo speed ratio
 
 
     # CONSTRUCTOR
@@ -156,6 +157,10 @@ class DriveWheel:
                 target = self.target_position
             # Compute PID speed command
             speed_cmd = self.pid.update(target, current_pos)
+            # If this is the left wheel (positive direction)
+            if self.direction == 1:
+                # Slow down left wheel slightly to match right wheel speed
+                speed_cmd = speed_cmd * self.L_R_SPEED_RATIO
             # If error is within 1 encoder tick -> target reached
             if abs(target - current_pos) < 1.0:
                 self.target_reached = True
