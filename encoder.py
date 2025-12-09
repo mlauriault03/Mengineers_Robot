@@ -28,6 +28,9 @@ class Encoder:
         self.ss = seesaw.Seesaw(self.i2c, addr=address)
         self.encoder = rotaryio.IncrementalEncoder(self.ss)
 
+        # Forward Spin Direction
+        self.direction = direction
+
         # Thread state
         self.rate_hz = rate_hz
         self._running = False
@@ -90,7 +93,7 @@ class Encoder:
 
         while self._running:
             now = time.time()
-            pos = self.encoder.position
+            pos = self.encoder.position * self.direction
 
             dt = now - self._last_time
             dp = pos - self._last_position
