@@ -84,7 +84,8 @@ class DriveWheel:
     # CONSTANTS
 
     DIAMETER_IN = 2.64          # Wheel diameter in inches
-    L_R_SPEED_RATIO = 0.9       # Left to right servo speed ratio
+    FW_SLOW_FACTOR = 0.9        # Factor to match max forward speed to max reverse speed
+    # NOTE: Servos move different speeds when turning forward vs turning backward
 
 
     # CONSTRUCTOR
@@ -157,10 +158,15 @@ class DriveWheel:
                 target = self.target_position
             # Compute PID speed command
             speed_cmd = self.pid.update(target, current_pos)
-            # If this is the left wheel (positive direction)
-            if self.direction == 1:
-                # Slow down left wheel slightly to match right wheel speed
-                speed_cmd = speed_cmd * self.L_R_SPEED_RATIO
+            # Determine if servo is moving counter-clockwise (forward direction)
+            forward = (
+                (self.direction == 1 and speed_cmd >= 0) or     # left wheel forward
+                (self.direction == -1 and speed_cmd < 0)        # right wheel forward
+            )
+            # If turning counter-clockwise (forward)
+            if forward:
+                # Reduce speed command (slow down) by factor to match reverse scale 
+                speed_cmd = speed_cmd * self.FW_SLOW_FACTOR
             # If error is within 1 encoder tick -> target reached
             if abs(target - current_pos) < 1.0:
                 self.target_reached = True
