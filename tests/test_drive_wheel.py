@@ -4,23 +4,22 @@
 
 # PRIVATE LIBRARIES
 from drive_wheel import DriveWheel
-from main import PIN_SERVO_LEFT, PIN_SERVO_RIGHT, ADDR_ENC_LEFT, ADDR_ENC_RIGHT
+from main import PIN_SERVO_LEFT, PIN_SERVO_RIGHT, ADDR_ENC_LEFT, ADDR_ENC_RIGHT, KP, KI, KD
 
 
 # PARAMETERS
-KP = 0.1
 TARGET_POS = 50
 
 
 def test1():
     try:
-        left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1, KP)
-        right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1, KP)
+        left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1, KP, KI, KD)
+        right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1, KP, KI, KD)
 
         left_wheel.set_target_position(TARGET_POS)
         right_wheel.set_target_position(TARGET_POS)
 
-        print("Starting drive wheel...")
+        print("Starting drive wheels...")
 
         left_wheel.start()
         right_wheel.start()

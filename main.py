@@ -10,12 +10,17 @@ from drive_wheel import DriveWheel
 from arduino import Arduino, Command
 
 
-# PARAMETERS
+# HARDWARE PARAMETERS
 PORT_ARDUINO    = '/dev/ttyACM0'
 PIN_SERVO_LEFT  = 13    # GPIO13 (PWM1)
 PIN_SERVO_RIGHT = 12    # GPIO12 (PWM0)
 ADDR_ENC_LEFT   = 0x37  # A0=HIGH, A1=LOW
 ADDR_ENC_RIGHT  = 0x36  # A0=LOW, A1=LOW
+
+# PID PARAMETERS
+KP = 0.5                # Proportional (P) gain
+KI = 0.0                # Integral (I) gain
+KD = 0.0                # Derivative (D) gain
 
 # COORDINATES
 XY_START     = (0, 0)
@@ -47,8 +52,8 @@ class Robot:
         # Arduino communication
         self.arduino = Arduino(PORT_ARDUINO, 9600)
         # Drive wheel controllers (PID controlled)
-        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1)
-        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1)
+        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1, KP, KI, KD)
+        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1, KP, KI, KD)
 
     def start(self):
         """Start robot systems."""

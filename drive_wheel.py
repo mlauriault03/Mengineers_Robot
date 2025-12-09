@@ -145,11 +145,11 @@ class DriveWheel:
             if abs(target - current_pos) < 1.0:
                 # Stop servo (error is as small as possible)
                 self.servo.set_speed(0.0)
-                print("Target reached. Servo stopped.")
+                print(f"{'L' if self.direction == 1 else 'R'}:\ttarget: reached")
             # Otherwise keep trying to reduce error (reach target)
             else:
                 # Set servo speed
                 self.servo.set_speed(speed_cmd)
-                print(f"{'LEFT' if self.direction == 1 else 'RIGHT'}:\ttarget: {target}\tposition: {current_pos}\tspeed: {speed_cmd}\t")
+                print(f"{'L' if self.direction == 1 else 'R'}:\ttarget: {target}\tposition: {current_pos}\tspeed: {speed_cmd * self.direction}\t")
             # Wait for next cycle
             time.sleep(period)
