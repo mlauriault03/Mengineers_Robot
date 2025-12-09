@@ -18,9 +18,15 @@ class Encoder:
       - velocity (counts/sec)
       - optional threaded polling
     """
+    
+    # CONSTANTS
 
-    DEFAULT_ADDR = 0x36
+    TICKS_PER_REV = 24      # Ticks per full revolution
+    DEFAULT_ADDR = 0x36     # I2C address without A0 or A1 set
     DEFAULT_RATE_HZ = 200   # polling frequency (5 ms)
+
+
+    # CONSTRUCTOR
 
     def __init__(self, address: int = DEFAULT_ADDR, direction: int = 1, rate_hz: int = DEFAULT_RATE_HZ):
         # Allow user to pass an I2C bus or create one

@@ -2,11 +2,14 @@
 # 11/12/25
 
 # PUBLIC LIBRARIES
+import time
+import math
 from enum import Enum
 # TODO add drone control library
 
 # PRIVATE LIBRARIES
 from drive_wheel import DriveWheel
+from encoder import Encoder
 from arduino import Arduino, Command
 
 
@@ -107,13 +110,26 @@ class Robot:
 
     # MOVEMENT PROCEDURES
 
-    def move_to(self, xy_target: tuple[float, float]):
-        """Move robot to specified (x,y) location."""
+    def move_forward(self, distance_in: int):
+        """Move forward specified distance in inches"""
         self.state = State.MOVING
-        # TODO: implement navigation logic to move to (x, y) target
+        # Calculate encoder ticks needed to travel the distance
+        circumference = math.pi * DriveWheel.DIAMETER_IN    # circumference = pi * diameter
+        rotations = distance_in / circumference             # rotations = distance / circumference
+        encoder_ticks = rotations * Encoder.TICKS_PER_REV    # ticks = rotations * (ticks/rotations)
+        # Set target position for both wheels (same absolute value)
+        self.left_wheel.turn_by(encoder_ticks)
+        self.right_wheel.turn_by(encoder_ticks)
+        # Wait for both wheels to reach their target positions
+        # Check every 100ms until both wheels are within 1 tick of target
+        while True:
+            # Both wheels reached target (within 1 encoder tick)
+            if self.left_wheel.is_target_reached() and self.right_wheel.is_target_reached():
+                break
+            time.sleep(0.1)
     
     def turn_by(self, angle_deg: float):
-        """Turn robot by specified angle (degrees)."""
+        """Turn robot by specified angle in degrees."""
         self.state = State.MOVING
         # TODO: implement turning logic
 
@@ -133,25 +149,25 @@ class Robot:
         # backup to wall to align direction
         # TODO
         # move to keypad
-        self.move_to(XY_KEYPAD)
+        # TODO use move_forward() and turn_by()
         # press keypad
         self.press_keypad()
         # move to duck
-        self.move_to(XY_DUCK)
+        # TODO use move_forward() and turn_by()
         # whack duck
         self.whack_duck()
         # move to button
-        self.move_to(XY_BUTTON)
+        # TODO use move_forward() and turn_by()
         # push button
         self.push_button()
         # move to crank
-        self.move_to(XY_CRANK)
+        # TODO use move_forward() and turn_by()
         # turn crank
         self.turn_crank()
         # fly drone
         self.fly_drone()
         # return to start (go around other side of crater - extra points)
-        self.move_to(XY_START)
+        # TODO use move_forward() and turn_by()
         
 
 

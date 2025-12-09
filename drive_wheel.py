@@ -81,6 +81,13 @@ class DriveWheel:
         Update rate in Hz
     """
 
+    # CONSTANTS
+
+    DIAMETER_IN = 2.64          # Wheel diameter in inches
+
+
+    # CONSTRUCTOR
+
     def __init__(self, servo_pin: int, encoder_addr: int, direction=1, kp=0.5, ki=0.0, kd=0.0, rate_hz=100):
         # Hardware control objects
         self.servo = Servo(servo_pin, direction)
@@ -90,7 +97,8 @@ class DriveWheel:
         # PID controller
         self.pid = PID(kp, ki, kd, -1.0, 1.0)
         # Control state
-        self.target_position = 0.0
+        self.target_position = 0
+        self.target_reached = False
         self.rate_hz = rate_hz
         # Threading
         self._running = False
@@ -117,16 +125,23 @@ class DriveWheel:
         self.stop()
         self.servo.shutdown()
 
-    def set_target_position(self, pos):
+    def set_target_position(self, encoder_ticks: int):
         with self._lock:
-            self.target_position = float(pos)
+            self.target_position = encoder_ticks
             self.pid.reset()
+
+    def turn_by(self, encoder_ticks: int):
+        target_position = self.get_position() + encoder_ticks
+        self.set_target_position(target_position)
 
     def get_position(self):
         return self.encoder.get_position()
 
     def get_velocity(self):
         return self.encoder.get_velocity()
+    
+    def is_target_reached(self):
+        return self.target_reached
 
 
     # INTERNAL CONTROL LOOP
@@ -143,11 +158,13 @@ class DriveWheel:
             speed_cmd = self.pid.update(target, current_pos)
             # If error is within 1 encoder tick -> target reached
             if abs(target - current_pos) < 1.0:
+                self.target_reached = True
                 # Stop servo (error is as small as possible)
                 self.servo.set_speed(0.0)
                 print(f"{'L' if self.direction == 1 else 'R'}:\ttarget: reached")
             # Otherwise keep trying to reduce error (reach target)
             else:
+                self.target_reached = False
                 # Set servo speed
                 self.servo.set_speed(speed_cmd)
                 print(f"{'L' if self.direction == 1 else 'R'}:\ttarget: {target}\tposition: {current_pos}\tspeed: {speed_cmd * self.direction}\t")
