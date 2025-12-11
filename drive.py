@@ -76,6 +76,7 @@ class Drive:
         self.dir_pid = PID(self.DIR_KP, self.DIR_KI, self.DIR_KD, -0.2, 0.2)
 
 
+
     # UTILITY METHODS
 
     def _distance_to_ticks(self, distance_in: int):
@@ -115,24 +116,28 @@ class Drive:
             self._set_speed(speed, speed)
             time.sleep(0.05)
 
-    def _get_position(self) -> tuple[int, int]:
-        return (self.encoder_left.get_position(), self.encoder_right.get_position())
-
 
     # PUBLIC METHODS
 
     def move_forward(self, distance_in: int):
         """Move forward specified distance in inches"""
+        # Start hardware
         self._startup_servos()
+        self.encoder_left.start()
+        self.encoder_right.start()
+        # Reset direction PID controller
         self.dir_pid.reset()
+        # Calculate ticks to reach distance
         target_ticks = self._distance_to_ticks(distance_in)
+        print(f"Target ticks: {target_ticks}")
         # servo speed variables
         left_speed = 1
         right_speed = 1
         # control loop
         while True:
             # determine left and right wheel position difference
-            left_ticks, right_ticks = self._get_position()
+            left_ticks = self.encoder_left.get_position()
+            right_ticks = self.encoder_right.get_position()
             tick_diff = left_ticks - right_ticks
             # compute left servo speed compensation
             left_comp = self.dir_pid.update(target=0, current=tick_diff)
@@ -143,6 +148,8 @@ class Drive:
             if abs(right_ticks - target_ticks) <= 1:
                 self.servo_right.shutdown() # right servo reached target
                 right_speed = None
+            # Debug
+            print(f"C: {left_comp}\tLt: {left_ticks}\tRt: {right_ticks}\tDt: {tick_diff}\tLs: {left_speed}\tRs: {right_speed}")
             # break condition
             if (left_speed is None) and (right_speed is None): 
                 break
@@ -157,7 +164,10 @@ class Drive:
             if right_speed is not None:
                 self.servo_left.set_speed(right_speed)
             time.sleep(0.05) # 20 Hz control loop
-        time.sleep(1) # allow time for servo threads to join main thread
+        # Kill encoder threads (join them to main thread)
+        self.encoder_left.stop()
+        self.encoder_right.stop()
+        time.sleep(1) # allow time for servo/encoder threads to join main thread
 
         # ---------------------------- TEST CODE ----------------------------
         # self._start_servos()

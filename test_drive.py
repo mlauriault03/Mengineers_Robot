@@ -22,15 +22,18 @@ def test1():
     encoder_left = Encoder(ADDR_ENC_LEFT, 1)
     encoder_right = Encoder(ADDR_ENC_RIGHT, -1)
 
+    servo_left.startup()
+    servo_right.startup()
+
     servo_left.set_speed(1.0)
     servo_right.set_speed(1.0)
 
     time.sleep(3)
 
-    servo_left.set_speed(0)
-    servo_right.set_speed(0)
+    servo_left.shutdown()
+    servo_right.shutdown()
     
-    time.sleep(3)
+    time.sleep(2)
 
 
 def test2():
