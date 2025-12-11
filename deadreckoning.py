@@ -3,23 +3,32 @@ import time
 
 
 def start():
-    print("Connecting to CoDrone...")
-    d = Drone()
-    d.pair()
-    print("Connected!")
-    d.reset_trim()
-    d.takeoff()
-    print("hovering")
-    d.hover(1)
-    d.go("forward", 20, 1)
-    d.hover(1)
-    print("returning")
-    d.go("up",20,0.6)
-    # d.turn_degree(180)
-    d.go("backward", 20, 1)
-    d.hover(1)
-    print("landing")
-    d.land()
-    d.close()
+        POWER = 50
+        FORWARD = 0.6
+        BACKWARD = 0.3
+        JUMP = 0.2
+        print("Connecting to CoDrone...")
+        drone = Drone()
+        drone.pair()
+        print("Connected!")
+        drone.reset_trim()
+        drone.takeoff()
+        print("hovering")
+        drone.hover(1)
+        drone.turn_degree(0)
+        drone.set_pitch(POWER)
 
-    print("Done.")
+        drone.move(FORWARD)
+        drone.hover(1)
+        print("returning")
+        drone.go("up",100,JUMP)
+        # d.turn_degree(180)
+        drone.turn_degree(0)
+        drone.set_pitch(-POWER)
+        drone.move(BACKWARD)
+        drone.hover(1)
+        print("landing")
+        drone.land()
+        drone.close()
+
+        print("Done.")
