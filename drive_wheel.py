@@ -8,53 +8,13 @@ import threading
 
 
 # PRIVATE LIBRARIES
+from pid import PID
 from encoder import Encoder
 from servo import Servo
 
 
 
-class PID:
-    """Minimal PID controller for robotic control loops."""
-    def __init__(self, kp, ki, kd, output_min=-1.0, output_max=1.0):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.out_min = output_min
-        self.out_max = output_max
 
-        self.integral = 0.0
-        self.last_error = 0.0
-        self.last_time = time.time()
-
-    def reset(self):
-        self.integral = 0.0
-        self.last_error = 0.0
-        self.last_time = time.time()
-
-    def update(self, target, current):
-        now = time.time()
-        dt = now - self.last_time
-        if dt <= 0:
-            dt = 1e-6
-
-        error = target - current
-
-        # PID components
-        p = self.kp * error
-        self.integral += error * dt
-        i = self.ki * self.integral
-        d = self.kd * (error - self.last_error) / dt
-
-        output = p + i + d
-
-        # Clamp output
-        output = max(self.out_min, min(self.out_max, output))
-
-        # Store
-        self.last_error = error
-        self.last_time = now
-
-        return output
 
 
 class DriveWheel:
@@ -84,7 +44,8 @@ class DriveWheel:
     # CONSTANTS
 
     DIAMETER_IN = 2.64          # Wheel diameter in inches
-    FW_SLOW_FACTOR = 0.9        # Factor to match max forward speed to max reverse speed
+    LEFT_SLOW_FACTOR = 0.9      # Factor to match max left speed to max right speed
+    # FW_SLOW_FACTOR = 0.9        # Factor to match max forward speed to max reverse speed
     # NOTE: Servos move different speeds when turning forward vs turning backward
 
 
@@ -158,15 +119,19 @@ class DriveWheel:
                 target = self.target_position
             # Compute PID speed command
             speed_cmd = self.pid.update(target, current_pos)
-            # Determine if servo is moving counter-clockwise (forward direction)
-            forward = (
-                (self.direction == 1 and speed_cmd >= 0) or     # left wheel forward
-                (self.direction == -1 and speed_cmd < 0)        # right wheel forward
-            )
-            # If turning counter-clockwise (forward)
-            if forward:
-                # Reduce speed command (slow down) by factor to match reverse scale 
-                speed_cmd = speed_cmd * self.FW_SLOW_FACTOR
+            # If this is the left wheel (positive direction)
+            if self.direction == 1:
+                # Slow down left wheel slightly to match right wheel speed
+                speed_cmd = speed_cmd * self.LEFT_SLOW_FACTOR
+            # # Determine if servo is moving counter-clockwise (forward direction)
+            # forward = (
+            #     (self.direction == 1 and speed_cmd >= 0) or     # left wheel forward
+            #     (self.direction == -1 and speed_cmd < 0)        # right wheel forward
+            # )
+            # # If turning counter-clockwise (forward)
+            # if forward:
+            #     # Reduce speed command (slow down) by factor to match reverse scale 
+            #     speed_cmd = speed_cmd * self.FW_SLOW_FACTOR
             # If error is within 1 encoder tick -> target reached
             if abs(target - current_pos) < 1.0:
                 self.target_reached = True
