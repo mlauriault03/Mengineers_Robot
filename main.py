@@ -95,7 +95,7 @@ class Robot:
         # backup to wall to align direction
         # TODO
         # move to button
-        self.drive.move_forward(26)
+        self.drive.move_forward(21.4)
         # push button
         self.push_button()
         # move to crank
@@ -121,6 +121,9 @@ class Robot:
         # fly drone
         # self.fly_drone()
         # return to start (go around other side of crater - extra points)
+
+        # shutdown hardware
+        self.drive._shutdown_servos()
 
 
 

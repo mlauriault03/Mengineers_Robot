@@ -76,6 +76,7 @@ class Encoder:
             self._velocity = 0.0
             self._last_position = 0
             self._last_time = time.time()
+        print("ENCODER RESET")
 
     def get_position(self):
         """Returns encoder count (thread-safe)."""
