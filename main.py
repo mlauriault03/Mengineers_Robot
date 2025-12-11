@@ -67,10 +67,10 @@ class Robot:
     def push_button(self):
         """Execute button procedure."""
         self.state = State.BUTTON
-        self.drive.move_forward(-1)     # move back
-        self.drive.move_forward(1)      # hit button 2nd time
-        self.drive.move_forward(-1)     # move back
-        self.drive.move_forward(1)      # hit button 3rd time
+        self.drive.move_forward(-2)     # move back
+        self.drive.move_forward(2)      # hit button 2nd time
+        self.drive.move_forward(-2)     # move back
+        self.drive.move_forward(2)      # hit button 3rd time
         self.state = State.MOVING
 
     def whack_duck(self):
@@ -98,24 +98,28 @@ class Robot:
         self.drive.move_forward(21.4)
         # push button
         self.push_button()
-        # move to crank
+        # move to duck
         self.drive.move_forward(-14)
-        self.drive.turn(90)
-        self.drive.move_forward(32)
-        self.drive.turn(-90)
-        self.drive.move_forward(21)
-        self.drive.turn(90)
-        self.drive.move_forward(36)
-        self.drive.turn(90)
-        self.drive.move_forward(10)
-        self.drive.turn(-90)
-        self.drive.move_forward(12)
-        self.drive.turn(-90)
-        self.drive.move_forward(2)
-        # turn crank
-        self.turn_crank()
+        self.drive.turn(80)
         # whack duck
-        # self.whack_duck()
+        self.whack_duck()
+
+
+        # self.drive.move_forward(32)
+        # self.drive.turn(-90)
+        # self.drive.move_forward(21)
+        # self.drive.turn(90)
+        # self.drive.move_forward(36)
+        # self.drive.turn(90)
+        # self.drive.move_forward(10)
+        # self.drive.turn(-90)
+        # self.drive.move_forward(12)
+        # self.drive.turn(-90)
+        # self.drive.move_forward(2)
+        # turn crank
+        # self.turn_crank()
+
+        
         # press keypad
         # self.press_keypad()
         # fly drone
