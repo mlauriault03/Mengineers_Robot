@@ -109,3 +109,4 @@ class Servo:
             time.sleep(0.02)
         # Close chip controller
         lgpio.gpiochip_close(self.h)
+        print("SERVO SHUT DOWN COMPLETE")

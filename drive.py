@@ -73,7 +73,7 @@ class Drive:
         self.encoder_right = Encoder(addr_encoder_right, -1)
 
         # Direction PID controller
-        self.dir_pid = PID(self.DIR_KP, self.DIR_KI, self.DIR_KD, -0.2, 0.2)
+        self.dir_pid = PID(self.DIR_KP, self.DIR_KI, self.DIR_KD, -0.3, 0.3)
 
 
 
@@ -143,14 +143,16 @@ class Drive:
             # compute left servo speed compensation
             left_comp = self.dir_pid.update(target=0, current=tick_diff)
             # stop either servo if they have reached the target position
-            if abs(left_ticks - target_ticks) <= 1:
-                self.servo_left.stop() # left servo reached target
+            if (abs(left_ticks - target_ticks) <= 1) and (left_speed is not None):
+                print("Shutting down LEFT servo...")
+                self.servo_left.shutdown() # left servo reached target
                 left_speed = None
-            if abs(right_ticks - target_ticks) <= 1:
-                self.servo_right.stop() # right servo reached target
+            if (abs(right_ticks - target_ticks) <= 1 and (right_speed is not None)):
+                print("Shutting down RIGHT servo...")
+                self.servo_right.shutdown() # right servo reached target
                 right_speed = None
             # Debug
-            print(f"C: {left_comp}\tLt: {left_ticks}\tRt: {right_ticks}\tDt: {tick_diff}\tLs: {left_speed}\tRs: {right_speed}")
+            print(f"Comp: {left_comp}\tLt: {left_ticks}\tRt: {right_ticks}\tDt: {tick_diff}\tLs: {left_speed}\tRs: {right_speed}")
             # break condition
             if (left_speed is None) and (right_speed is None): 
                 break
@@ -165,12 +167,12 @@ class Drive:
             if right_speed is not None:
                 self.servo_right.set_speed(right_speed)
             time.sleep(0.05) # 20 Hz control loop
-        # Kill servo and encoder threads (join them to main thread)
-        self.servo_left.shutdown()
-        self.servo_right.shutdown()
+        print("TARGET REACHED")
+        # Kill encoder threads (join them to main thread)
         self.encoder_left.stop()
         self.encoder_right.stop()
-        time.sleep(2) # allow time for threads to join main thread
+        time.sleep(3) # allow time for encoder threads to join
+        print("DONE")
 
         # ---------------------------- TEST CODE ----------------------------
         # self._start_servos()
