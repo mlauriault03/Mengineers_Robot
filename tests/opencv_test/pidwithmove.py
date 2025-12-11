@@ -38,9 +38,9 @@ cv2.namedWindow('LED Tracker')
 # Color ranges
 lower_green = np.array([77, 24, 200])  # Lower saturation, higher value
 upper_green = np.array([98, 255, 255])  # Extended hue range into cyan
-lower_red1 = np.array([0, 24, 184])    # Lower saturation, higher value
-upper_red1 = np.array([34, 255, 255])  # Extended into orange range
-lower_red2 = np.array([172, 0, 160])  # Covers pure red end
+lower_red1 = np.array([0, 10, 200])    # Lower saturation, higher value
+upper_red1 = np.array([33, 255, 255])  # Extended into orange range
+lower_red2 = np.array([170, 21, 160])  # Covers pure red end
 upper_red2 = np.array([180, 255, 255])
 
 # PID controllers for pitch and roll
@@ -49,7 +49,7 @@ pid_y = PID(kp=0.3, ki=0.01, kd=0.15)
 
 # Control parameters
 DESCENT_THROTTLE = -15
-MAX_CONTROL = 30
+MAX_CONTROL = 80
 CENTERING_THRESHOLD = 50
 
 # State variables
@@ -145,13 +145,15 @@ try:
                 pitch = np.clip(pid_y.update(offset_y, dt), -MAX_CONTROL, MAX_CONTROL)
                 
                 # Apply control
-                drone.set_roll(int(roll))
+                drone.set_roll(int(-roll))
                 drone.set_pitch(int(pitch))
                 drone.set_throttle(DESCENT_THROTTLE)
                 drone.move()
                 
                 status = "CENTERED" if abs(offset_x) < CENTERING_THRESHOLD and abs(offset_y) < CENTERING_THRESHOLD else "CORRECTING"
                 print(f"X: {offset_x:.1f}px | Y: {offset_y:.1f}px | Roll: {roll:.1f} | Pitch: {pitch:.1f} | {status}")
+                drone.go("down",100,0.2)  if abs(offset_x) < CENTERING_THRESHOLD and abs(offset_y) < CENTERING_THRESHOLD else "CORRECTING"
+
         
         # Display mode
         if landing_mode:
