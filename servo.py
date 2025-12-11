@@ -48,13 +48,7 @@ class Servo:
         self._running = True
         self._lock = threading.Lock()
 
-        # Claim hardware
-        self.h = lgpio.gpiochip_open(chip)
-        lgpio.gpio_claim_output(self.h, pin)
-
-        # Start the worker thread
-        self.thread = threading.Thread(target=self._pulse_worker, daemon=True)
-        self.thread.start()
+        # self.startup()
 
     
     # PRIVATE METHODS
@@ -81,6 +75,15 @@ class Servo:
 
     # PUBLIC METHODS
 
+    def startup(self):
+        # Claim hardware
+        self.h = lgpio.gpiochip_open(self.chip)
+        lgpio.gpio_claim_output(self.h, self.pin)
+
+        # Start the worker thread
+        self.thread = threading.Thread(target=self._pulse_worker, daemon=True)
+        self.thread.start()
+
     def set_speed(self, speed):
         """
         Set servo speed in range [-1, 1].
@@ -100,7 +103,6 @@ class Servo:
         self._running = False
         self.thread.join()
         self.stop()
-
         # Send a few neutral pulses to settle
         for _ in range(5):
             lgpio.tx_pulse(self.h, self.pin, self.pulse_neutral, self.PERIOD - self.pulse_neutral)
