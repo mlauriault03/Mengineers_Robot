@@ -74,11 +74,6 @@ class Drive:
         # Direction PID controller
         self.dir_pid = PID(self.DIR_KP, self.DIR_KI, self.DIR_KD, -self.DIR_MAX_COMP, self.DIR_MAX_COMP)
 
-        # Start hardare threads
-        self._startup_servos()
-        self.encoder_left.start()
-        self.encoder_right.start()
-
 
     # UTILITY METHODS
 

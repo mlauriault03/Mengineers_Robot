@@ -58,26 +58,29 @@ class Robot:
         """Execute crank procedure."""
         self.state = State.CRANK
         self.arduino.send_command(Command.MOTOR3)
+        # time.sleep(5)
         # TODO: wait for reponse from Arduino -> then change state
 
     def press_keypad(self):
         """Execute keypad procedure."""
         self.state = State.KEYPAD
         self.arduino.send_command(Command.MOTOR1)
+        # time.sleep(5)
         # TODO: wait for reponse from Arduino -> then change state
 
     def push_button(self):
         """Execute button procedure."""
         self.state = State.BUTTON
         self.drive.move_forward(-2)     # move back
-        self.drive.move_forward(2)      # hit button 2nd time
+        self.drive.move_forward(1.5)      # hit button 2nd time
         self.drive.move_forward(-2)     # move back
-        self.drive.move_forward(2)      # hit button 3rd time
+        self.drive.move_forward(1.5)      # hit button 3rd time
         self.state = State.MOVING
 
     def whack_duck(self):
         """Execute duck procedure."""
         self.state = State.DUCK
+        # time.sleep(7.5)
         self.arduino.send_command(Command.MOTOR2)
         # TODO: wait for reponse from Arduino -> then change state
 
@@ -93,36 +96,35 @@ class Robot:
         """Main robot procedure."""
         # sense flash signal
         lightstart.start()
-        # fly drone
-        self.fly_drone()
+         # Start hardare threads
+        self.drive._startup_servos()
+        self.drive.encoder_left.start()
+        self.drive.encoder_right.start()
+        time.sleep(1) # Allow threads to start
         # move to button
         self.drive.move_forward(21.4)
         # push button
         self.push_button()
         # move to duck
         self.drive.move_forward(-14)
-        self.drive.turn(80)
-        self.drive.move_forward(32)
+        self.drive.turn(83.5)
+        self.drive.move_forward(31.5)
         # whack duck
         self.whack_duck()
-        # self.drive.turn(-80)
-        # self.drive.move_forward(21)
-        # self.drive.turn(80)
-        # self.drive.move_forward(36)
-        # self.drive.turn(80)
-        # self.drive.move_forward(10)
-        # self.drive.turn(-80)
-        # self.drive.move_forward(12)
-        # self.drive.turn(-80)
-        # self.drive.move_forward(2)
+        # fly drone
+        self.fly_drone()
         # turn crank
         self.turn_crank()
         # press keypad
         self.press_keypad()
-        # return to start (go around other side of crater - extra points)
-
+        # return to start
+        self.drive.move_forward(-31.5)
+        self.drive.turn(90)
+        self.drive.move_forward(9)
         # shutdown hardware
         self.drive._shutdown_servos()
+        
+        # return to start (go around other side of crater - extra points)
 
 
 

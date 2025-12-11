@@ -108,7 +108,7 @@ void loop() {
     } else if (cmd == MOTOR2) {
       Serial.println("Turning motor 2 (extender)...");
       drive_motor(2, 255);
-      delay(3500);
+      delay(4000);
       drive_motor(2, -255);
       delay(4000);
       drive_motor(2, 0);
