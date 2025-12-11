@@ -124,6 +124,7 @@ class Drive:
     def move_forward(self, distance_in: int):
         """Move forward specified distance in inches"""
         self._startup_servos()
+<<<<<<< Updated upstream
         self.dir_pid.reset()
         target_ticks = self._distance_to_ticks(distance_in)
         # servo speed variables
@@ -172,3 +173,12 @@ class Drive:
         """Turn robot by specified angle in degrees."""
         # TODO: implement turning logic
         pass
+=======
+        ticks = distance_in # TESTING ONLY
+        self._ramp_up(1)
+        # self._set_speed(0.5, 0.5)
+        time.sleep(5)
+        self._shutdown_servos()
+        time.sleep(1)
+        # Set target position for both wheels (same absolute value)
+>>>>>>> Stashed changes

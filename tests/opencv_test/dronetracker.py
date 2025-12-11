@@ -1,5 +1,6 @@
 import cv2
 import math
+from itertools import combinations
 from picamera2 import Picamera2
 from codrone_edu.drone import *
 
@@ -16,11 +17,11 @@ SENSOR_WIDTH = 3.68
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 480
 
-lower_green = (80, 60, 135)
+lower_green = (80, 45, 135)
 upper_green = (100, 255, 255)
 lower_red1 = (0, 60, 70)
-upper_red1 = (10, 255, 255)
-lower_red2 = (170, 60, 70)
+upper_red1 = (20, 255, 255)
+lower_red2 = (160, 60, 70)
 upper_red2 = (180, 255, 255)
 
 # Centering parameters
@@ -32,12 +33,14 @@ YAW_GAIN = 0.3  # yaw correction gain (reduced)
 
 # Movement parameters for go() function
 # Assume: 1 second at 20% power = 10cm = 0.1m
-BASE_POWER = 40  # base power percentage
+BASE_POWER = 5  # base power percentage
 DESCENT_POWER = 80  # power for gradual descent
 DESCENT_DURATION = 0.3  # seconds to descend each iteration
 MAX_DURATION = 0.5  # maximum duration per adjustment to prevent long freezes
 MIN_HEIGHT = 30  # cm - emergency stop if below this height
 LOW_ALT_STRIKES = 5
+
+
 
 print("Press 't' to takeoff, 'q' to quit, 'e' for emergency stop, 'l' to start landing sequence")
 
@@ -63,7 +66,7 @@ while not takeoff_done:
 print("Taking off...")
 drone.takeoff()
 drone.hover(2)
-
+drone.send_absolute_position(0,0,1,1,0,0)
 landing_mode = False
 low_alt_strikes = LOW_ALT_STRIKES
 should_exit = False
@@ -81,25 +84,39 @@ try:
         green_contours, _ = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         red_contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        green_centers = []
+        # Find all green LEDs with area (brightness proxy)
+        green_candidates = []
         for c in green_contours:
-            if cv2.contourArea(c) > 50:
+            area = cv2.contourArea(c)
+            if area > 50:
                 M = cv2.moments(c)
                 if M["m00"] > 0:
                     cx = int(M["m10"] / M["m00"])
                     cy = int(M["m01"] / M["m00"])
-                    green_centers.append((cx, cy))
-                    cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
+                    green_candidates.append((cx, cy, area))
         
-        red_centers = []
+        # Keep only the two strongest (largest area) green LEDs
+        green_candidates.sort(key=lambda x: x[2], reverse=True)
+        green_centers = [(x, y) for x, y, _ in green_candidates[:2]]
+        for cx, cy in green_centers:
+            cv2.circle(frame, (cx, cy), 5, (0, 255, 0), -1)
+        
+        # Find all red LEDs with area (brightness proxy)
+        red_candidates = []
         for c in red_contours:
-            if cv2.contourArea(c) > 50:
+            area = cv2.contourArea(c)
+            if area > 50:
                 M = cv2.moments(c)
                 if M["m00"] > 0:
                     cx = int(M["m10"] / M["m00"])
                     cy = int(M["m01"] / M["m00"])
-                    red_centers.append((cx, cy))
-                    cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+                    red_candidates.append((cx, cy, area))
+        
+        # Keep only the two strongest (largest area) red LEDs
+        red_candidates.sort(key=lambda x: x[2], reverse=True)
+        red_centers = [(x, y) for x, y, _ in red_candidates[:2]]
+        for cx, cy in red_centers:
+            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
         
         # Draw center crosshairs
         cv2.line(frame, (IMAGE_WIDTH // 2 - 20, IMAGE_HEIGHT // 2), 
@@ -122,87 +139,87 @@ try:
                 for j in range(i + 1, len(all_points)):
                     cv2.line(frame, pt, all_points[j], (255, 255, 0), 1)
             
-            pixel_width = math.sqrt((green_centers[0][0] - green_centers[1][0])**2 + 
-                                   (green_centers[0][1] - green_centers[1][1])**2)
+                pixel_width = math.sqrt((green_centers[0][0] - green_centers[1][0])**2 + 
+                                       (green_centers[0][1] - green_centers[1][1])**2)
             
-            if pixel_width > 0:
-                distance = (FRONT_WIDTH * FOCAL_LENGTH * IMAGE_WIDTH) / (pixel_width * SENSOR_WIDTH)
-                avg_x = sum(p[0] for p in all_points) / 4
-                avg_y = sum(p[1] for p in all_points) / 4
-                offset_x = avg_x - IMAGE_WIDTH / 2
-                offset_y = 240 - avg_y
-                
-                front_center_x = (green_centers[0][0] + green_centers[1][0]) / 2
-                rear_center_x = (red_centers[0][0] + red_centers[1][0]) / 2
-                front_center_y = (green_centers[0][1] + green_centers[1][1]) / 2
-                rear_center_y = (red_centers[0][1] + red_centers[1][1]) / 2
-                yaw = math.degrees(math.atan2(rear_center_x - front_center_x, 
-                                             front_center_y - rear_center_y))
-                
-                # Draw target center
-                cv2.circle(frame, (int(avg_x), int(avg_y)), 10, (0, 255, 255), 2)
-                
-                # Display status
-                status = "CENTERED" if (abs(offset_x) < CENTERING_THRESHOLD and 
-                                       abs(offset_y) < CENTERING_THRESHOLD and 
-                                       abs(yaw) < YAW_THRESHOLD) else "ADJUSTING"
-                cv2.putText(frame, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
-                           1, (0, 255, 0) if status == "CENTERED" else (0, 165, 255), 2)
-                
-                # Landing mode: adjust position to center
-                if landing_mode:
-                    # Check height and emergency stop if too low
-                    current_height = drone.get_height()
+                if pixel_width > 0:
+                    distance = (FRONT_WIDTH * FOCAL_LENGTH * IMAGE_WIDTH) / (pixel_width * SENSOR_WIDTH)
+                    avg_x = sum(p[0] for p in all_points) / 4
+                    avg_y = sum(p[1] for p in all_points) / 4
+                    offset_x = avg_x - IMAGE_WIDTH / 2
+                    offset_y = 240 - avg_y
                     
-                    # Display height on screen
-                    cv2.putText(frame, f"Height: {current_height}cm", (10, IMAGE_HEIGHT - 100), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    front_center_x = (green_centers[0][0] + green_centers[1][0]) / 2
+                    rear_center_x = (red_centers[0][0] + red_centers[1][0]) / 2
+                    front_center_y = (green_centers[0][1] + green_centers[1][1]) / 2
+                    rear_center_y = (red_centers[0][1] + red_centers[1][1]) / 2
+                    yaw = math.degrees(math.atan2(rear_center_x - front_center_x, 
+                                                 front_center_y - rear_center_y))
                     
-                    # Only check height if it's a valid reading (not 0)
-                    if current_height > 0 and current_height < MIN_HEIGHT:
-                        low_alt_strikes -= 1
-                        print(f"HEIGHT LOW ({current_height}cm) - Strikes remaining: {low_alt_strikes}")
-                        if low_alt_strikes <= 0:
-                            print("EMERGENCY STOP!")
-                            drone.emergency_stop()
+                    # Draw target center
+                    cv2.circle(frame, (int(avg_x), int(avg_y)), 10, (0, 255, 255), 2)
+                    
+                    # Display status
+                    status = "CENTERED" if (abs(offset_x) < CENTERING_THRESHOLD and 
+                                           abs(offset_y) < CENTERING_THRESHOLD and 
+                                           abs(yaw) < YAW_THRESHOLD) else "ADJUSTING"
+                    cv2.putText(frame, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
+                               1, (0, 255, 0) if status == "CENTERED" else (0, 165, 255), 2)
+                    
+                    # Landing mode: adjust position to center
+                    if landing_mode:
+                        # Check height and emergency stop if too low
+                        current_height = drone.get_height()
+                        
+                        # Display height on screen
+                        cv2.putText(frame, f"Height: {current_height}cm", (10, IMAGE_HEIGHT - 100), 
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                        
+                        # Only check height if it's a valid reading (not 0)
+                        if current_height > 0 and current_height < MIN_HEIGHT:
+                            low_alt_strikes -= 1
+                            print(f"HEIGHT LOW ({current_height}cm) - Strikes remaining: {low_alt_strikes}")
+                            if low_alt_strikes <= 0:
+                                print("EMERGENCY STOP!")
+                                drone.emergency_stop()
+                                should_exit = True
+                        else:
+                            low_alt_strikes = LOW_ALT_STRIKES
+                        
+                        print(f"Distance: {distance:.1f}mm | X: {offset_x:.1f}px | Y: {offset_y:.1f}px | Yaw: {yaw:.1f}° | Height: {current_height}cm | {status}")
+                        
+                        if abs(offset_x) < CENTERING_THRESHOLD and abs(offset_y) < CENTERING_THRESHOLD and abs(yaw) < YAW_THRESHOLD:
+                            print("CENTERED - Landing now!")
+                            drone.land()
                             should_exit = True
-                    else:
-                        low_alt_strikes = LOW_ALT_STRIKES
-                    
-                    print(f"Distance: {distance:.1f}mm | X: {offset_x:.1f}px | Y: {offset_y:.1f}px | Yaw: {yaw:.1f}° | Height: {current_height}cm | {status}")
-                    
-                    if abs(offset_x) < CENTERING_THRESHOLD and abs(offset_y) < CENTERING_THRESHOLD and abs(yaw) < YAW_THRESHOLD:
-                        print("CENTERED - Landing now!")
-                        drone.land()
-                        should_exit = True
-                    else:
-                        # Calculate position adjustments in meters
-                        move_right = offset_x * POSITION_GAIN    # right/left in meters
-                        move_forward = offset_y * POSITION_GAIN  # forward/back in meters
-                        turn_angle = -yaw * YAW_GAIN             # yaw correction
-                        
-                        # Convert meters to go() duration (seconds at BASE_POWER)
-                        # 1 second at 20% = 0.1m, so duration = distance / 0.1
-                        duration_right = abs(move_right) / 0.1
-                        duration_forward = abs(move_forward) / 0.1
-                        
-                        # Apply movements using go(direction, power, duration)
-                        if abs(move_forward) > 0.01:  # threshold 1cm
-                            direction = "forward" if move_forward > 0 else "backward"
-                            drone.go(direction, BASE_POWER, duration_forward)
-                        
-                        if abs(move_right) > 0.01:  # threshold 1cm
-                            direction = "right" if move_right < 0 else "left"
-                            drone.go(direction, BASE_POWER, duration_right)
-                        
-                        if abs(turn_angle) > 1:  # threshold 1 degree
-                            drone.turn(turn_angle)
-                        
-                        # If reasonably close to center, descend while adjusting
-                        total_offset = math.sqrt(offset_x**2 + offset_y**2)
-                        if total_offset < DESCENT_THRESHOLD:
-                            drone.go("down", DESCENT_POWER, DESCENT_DURATION)
-                            print(f"descending {DESCENT_DURATION}s (offset: {total_offset:.1f}px)")
+                        else:
+                            # Calculate position adjustments in meters
+                            move_right = offset_x * POSITION_GAIN    # right/left in meters
+                            move_forward = offset_y * POSITION_GAIN  # forward/back in meters
+                            turn_angle = -yaw * YAW_GAIN             # yaw correction
+                            
+                            # Convert meters to go() duration (seconds at BASE_POWER)
+                            # 1 second at 20% = 0.1m, so duration = distance / 0.1
+                            duration_right = abs(move_right) / 0.1
+                            duration_forward = abs(move_forward) / 0.1
+                            
+                            # Apply movements using go(direction, power, duration)
+                            if abs(move_forward) > 0.01:  # threshold 1cm
+                                direction = "forward" if move_forward < 0 else "backward"
+                                drone.go(direction, BASE_POWER, duration_forward)
+                            
+                            if abs(move_right) > 0.01:  # threshold 1cm
+                                direction = "right" if move_right < 0 else "left"
+                                drone.go(direction, BASE_POWER, duration_right)
+                            
+                            if abs(turn_angle) > 1:  # threshold 1 degree
+                                drone.turn(turn_angle)
+                            
+                            # Only descend if target is detected and reasonably close to center
+                            total_offset = math.sqrt(offset_x**2 + offset_y**2)
+                            if total_offset < DESCENT_THRESHOLD:
+                                drone.go("down", DESCENT_POWER, DESCENT_DURATION)
+                                print(f"descending {DESCENT_DURATION}s (offset: {total_offset:.1f}px)")
         
         if landing_mode:
             mode_text = "LANDING MODE"
