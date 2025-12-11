@@ -36,7 +36,8 @@ class Drive:
 
     # GENERAL PARAMETERS
 
-    WHEEL_DIAMETER_IN = 2.64    # Wheel diameter in inches
+    WHEEL_DIAMETER_IN = 2.64      # Wheel diameter in inches
+    WHEEL_BASE_IN = 8.5           # Space between wheel centers in inches
 
     # SERVO PARAMETERS
     LEFT_PULSE_REVERSE  = 1000    # 1000 [ms] full speed reverses
@@ -81,12 +82,21 @@ class Drive:
 
     # UTILITY METHODS
 
-    def _distance_to_ticks(self, distance_in: int):
+    def _distance_to_ticks(self, distance_in: float) -> int:
         """Calculate encoder ticks needed to travel specified distance"""
         circumference = math.pi * self.WHEEL_DIAMETER_IN    # circumference = pi * diameter
         rotations = distance_in / circumference             # rotations = distance / circumference
         encoder_ticks = rotations * Encoder.TICKS_PER_REV   # ticks = rotations * (ticks/rotations)
         return int(encoder_ticks) + 1                       # round to an integer (+1 because move_forward stops early by 1)
+    
+    def _angle_to_ticks(self, angle_deg: float) -> int:
+        """Convert in-place rotation angle to encoder ticks."""
+        # Convert angle to absolute magnitude
+        angle = abs(angle_deg)
+        # Arc length each wheel must travel for the robot to rotate by angle_deg
+        arc_length = (math.pi * self.WHEEL_BASE_IN * angle) / 360.0
+        # Convert arc length to ticks (reuse same formula as linear motion)
+        return self._distance_to_ticks(arc_length)
     
 
     # MOVEMENT METHODS
@@ -121,7 +131,7 @@ class Drive:
 
     # PUBLIC METHODS
 
-    def move_forward(self, distance_in: int):
+    def move_forward(self, distance_in: float):
         """Move forward specified distance in inches"""
         # Reset encoders
         self.encoder_left.reset()
@@ -176,16 +186,44 @@ class Drive:
             time.sleep(0.02) # 50 Hz control loop
         print("TARGET REACHED")
 
-        # ---------------------------- TEST CODE ----------------------------
-        # self._start_servos()
-        # ticks = distance_in # TESTING ONLY
-        # # self._ramp_up(1)
-        # self._set_speed(0.5, 0.5)
-        # time.sleep(5)
-        # self._shutdown()
-        # -------------------------------------------------------------------
-
     def turn(self, angle_deg: float):
         """Turn robot by specified angle in degrees."""
-        # TODO: implement turning logic
-        pass
+        # Reset encoders
+        self.encoder_left.reset()
+        self.encoder_right.reset()
+        # Reset direction PID controller
+        self.dir_pid.reset()
+        # Calculate ticks to reach distance
+        target_ticks = self._angle_to_ticks(angle_deg)
+        # Determine direction
+        direction = 1 if angle_deg > 0 else -1
+        print(f"Target ticks: {target_ticks}")
+        # servo speed variables (based on direction)
+        base_speed = 1 - self.DIR_MAX_COMP
+        left_speed  =  base_speed * direction
+        right_speed = -base_speed * direction
+        # control loop
+        while True:
+            # determine left and right wheel position difference
+            left_ticks = abs(self.encoder_left.get_position())
+            right_ticks = abs(self.encoder_right.get_position())
+            print(f"L:{left_ticks}  R:{right_ticks}  Target:{target_ticks}")
+            left_done  = left_ticks  >= target_ticks
+            right_done = right_ticks >= target_ticks
+            if left_done:
+                print("Stopping LEFT servo")
+                self.servo_left.stop()
+                left_speed = None
+            if right_done:
+                print("Stopping RIGHT servo")
+                self.servo_right.stop()
+                right_speed = None
+            if left_done and right_done:
+                break
+            # Update speeds
+            if left_speed is not None:
+                self.servo_left.set_speed(left_speed)
+            if right_speed is not None:
+                self.servo_right.set_speed(right_speed)
+            time.sleep(0.02)  # 50 Hz control loop
+        print("TURN COMPLETED")

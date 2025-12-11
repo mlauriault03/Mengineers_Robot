@@ -67,10 +67,10 @@ class Robot:
     def push_button(self):
         """Execute button procedure."""
         self.state = State.BUTTON
-        self.drive.move_forward(-1)     # move back
-        self.drive.move_forward(1)      # hit button 2nd time
-        self.drive.move_forward(-1)     # move back
-        self.drive.move_forward(1)      # hit button 3rd time
+        self.drive.move_forward(-2)     # move back
+        self.drive.move_forward(2)      # hit button 2nd time
+        self.drive.move_forward(-2)     # move back
+        self.drive.move_forward(2)      # hit button 3rd time
         self.state = State.MOVING
 
     def whack_duck(self):
