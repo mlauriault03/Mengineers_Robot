@@ -15,9 +15,9 @@ const int PIN_IN3     = 5;      // PWM speed (IN)  <-- must be PWM-capable
 
 
 // ---------- COMMANDS ----------
-const String MOTOR1 = "MOTOR1";
-const String MOTOR2 = "MOTOR2";
-const String MOTOR3 = "MOTOR3";
+const String MOTOR1 = "MOTOR1"; // Keypad
+const String MOTOR2 = "MOTOR2"; // Extender
+const String MOTOR3 = "MOTOR3"; // Crank
 // (Add more commands as needed...)
 
 
@@ -100,23 +100,29 @@ void loop() {
     cmd.trim();
     // Handle command
     if (cmd == MOTOR1) {
-      Serial.println("Turning motor 1...");
-      drive_motor(1, 255);
-      delay(10000);
+      Serial.println("Turning motor 1 (keypad)...");
+      drive_motor(1, -255);
+      delay(5000);
       drive_motor(1, 0);
       Serial.println("Turned motor 1");
     } else if (cmd == MOTOR2) {
-      Serial.println("Turning motor 2...");
+      Serial.println("Turning motor 2 (extender)...");
       drive_motor(2, 255);
-      delay(10000);
+      delay(3500);
+      drive_motor(2, -255);
+      delay(4000);
       drive_motor(2, 0);
       Serial.println("Turned motor 2");
     } else if (cmd == MOTOR3) {
-      Serial.println("Turning motor 3...");
-      drive_motor(3, 255);
-      delay(10000);
+      Serial.println("Turning motor 3 (crank)...");
+      drive_motor(3, -255);
+      delay(5000);
       drive_motor(3, 0);
       Serial.println("Turned motor 3");
+    } else if (cmd == "reset") {
+      drive_motor(2, -255);
+      delay(250);
+      drive_motor(2, 0);
     } else {
       Serial.print("Unknown command: ");
         Serial.println(cmd);
