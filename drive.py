@@ -18,20 +18,14 @@ class Drive:
     Robot Drive Controller.
     Parameters:
     ----------
-    servo_pin : int
-        Servo GPIO pin number on the Raspberry PI
-    encoder_addr : int
-        Encoder I2C address
-    direction : int
-        Forward spin direction of wheel (1 = left wheel, -1 = right wheel)
-    kp : float
-        Proportional (P) gain coefficient
-    ki : float
-        Integral (I) gain coefficient
-    kd : float
-        Derivative (D) gain coefficient
-    rate_hz : int
-        Update rate in Hz
+    pin_servo_left : int
+        Left Servo GPIO pin number on the Raspberry PI
+    pin_servo_right : int
+        Right Servo GPIO pin number on the Raspberry PI
+    addr_encoder_left : int
+        Left Encoder I2C address
+    addr_encoder_right : int
+        Right Encoder I2C address
     """
 
     # GENERAL PARAMETERS
@@ -70,7 +64,6 @@ class Drive:
         # )
         self.encoder_left = Encoder(addr_encoder_left, 1)
         self.encoder_right = Encoder(addr_encoder_right, -1)
-
         # Direction PID controller
         self.dir_pid = PID(self.DIR_KP, self.DIR_KI, self.DIR_KD, -self.DIR_MAX_COMP, self.DIR_MAX_COMP)
 
@@ -102,19 +95,10 @@ class Drive:
         self.servo_right.set_speed(right)
         self.servo_left.set_speed(left)
 
-    def _startup_servos(self):
-        self.servo_right.startup()
-        self.servo_left.startup()
-
     def _stop(self):
         """Set both servo's speed to zero and then wait 0.5 seconds for it to take effect"""
         self.servo_right.stop()
         self.servo_left.stop()
-        time.sleep(1)
-
-    def _shutdown_servos(self):
-        self.servo_right.shutdown()
-        self.servo_left.shutdown()
         time.sleep(1)
 
     def _ramp_up(self, end_speed: int, steps: int = 20):
@@ -125,6 +109,22 @@ class Drive:
 
 
     # PUBLIC METHODS
+
+    def startup(self):
+        """Start servo and encoder control threads"""
+        self.servo_left.startup()
+        self.servo_right.startup()
+        self.encoder_left.start()
+        self.encoder_right.start()
+        time.sleep(1) # wait for threads to start
+    
+    def shutdown(self):
+        """Stop servo and encoder control threads (join them to the main thread)"""
+        self.servo_left.shutdown()
+        self.servo_right.shutdown()
+        self.encoder_left.stop()
+        self.encoder_right.stop()
+        time.sleep(1) # wait for threads to join
 
     def move_forward(self, distance_in: float):
         """Move forward specified distance in inches"""
