@@ -8,7 +8,7 @@ from enum import Enum
 # TODO add drone control library
 
 # PRIVATE LIBRARIES
-from drive_wheel import DriveWheel
+from drive import Drive
 from encoder import Encoder
 from arduino import Arduino, Command
 
@@ -47,19 +47,7 @@ class Robot:
         # Arduino communication
         self.arduino = Arduino(PORT_ARDUINO, 9600)
         # Drive wheel controllers (PID controlled)
-        self.left_wheel = DriveWheel(PIN_SERVO_LEFT, ADDR_ENC_LEFT, 1, KP, KI, KD)
-        self.right_wheel = DriveWheel(PIN_SERVO_RIGHT, ADDR_ENC_RIGHT, -1, KP, KI, KD)
-
-    def start(self):
-        """Start robot systems."""
-        self.left_wheel.start()
-        self.right_wheel.start()
-
-    def shutdown(self):
-        """Shutdown robot systems."""
-        self.arduino.close()
-        self.left_wheel.stop()
-        self.right_wheel.stop()
+        self.drive = Drive(PIN_SERVO_LEFT, PIN_SERVO_RIGHT, ADDR_ENC_LEFT, ADDR_ENC_RIGHT)
 
 
     # TASK PROCEDURES
@@ -67,71 +55,37 @@ class Robot:
     def turn_crank(self):
         """Execute crank procedure."""
         self.state = State.CRANK
-        self.stop()
         self.arduino.send_command(Command.MOTOR1)
         # TODO: wait for reponse from Arduino -> then change state
 
     def press_keypad(self):
         """Execute keypad procedure."""
         self.state = State.KEYPAD
-        self.stop()
         self.arduino.send_command(Command.MOTOR2)
         # TODO: wait for reponse from Arduino -> then change state
 
     def push_button(self):
         """Execute button procedure."""
         self.state = State.BUTTON
-        self.stop()
-        # TODO: run into the button
-        # TODO: change state based on sensor inputs
+        self.drive.move_forward(-1)     # move back
+        self.drive.move_forward(1)      # hit button 2nd time
+        self.drive.move_forward(-1)     # move back
+        self.drive.move_forward(1)      # hit button 3rd time
+        self.state = State.MOVING
 
     def whack_duck(self):
         """Execute duck procedure."""
         self.state = State.DUCK
-        self.stop()
         self.arduino.send_command(Command.MOTOR3)
         # TODO: wait for reponse from Arduino -> then change state
 
     def fly_drone(self):
         """Execute drone procedure."""
         self.state = State.DRONE
-        self.stop()
         # TODO: send commands to drone
         # TODO: change state based on sensor inputs
 
 
-    # MOVEMENT PROCEDURES
-
-    def move_forward(self, distance_in: int):
-        """Move forward specified distance in inches"""
-        self.state = State.MOVING
-        # Calculate encoder ticks needed to travel the distance
-        circumference = math.pi * DriveWheel.DIAMETER_IN    # circumference = pi * diameter
-        rotations = distance_in / circumference             # rotations = distance / circumference
-        encoder_ticks = rotations * Encoder.TICKS_PER_REV   # ticks = rotations * (ticks/rotations)
-        # Set target position for both wheels (same absolute value)
-        self.left_wheel.turn_by(encoder_ticks)
-        self.right_wheel.turn_by(encoder_ticks)
-        # Wait for both wheels to reach their target positions
-        # Check every 100ms until both wheels are within 1 tick of target
-        while True:
-            # Both wheels reached target (within 1 encoder tick)
-            if self.left_wheel.is_target_reached() and self.right_wheel.is_target_reached():
-                break
-            time.sleep(0.1)
-    
-    def turn(self, angle_deg: float):
-        """Turn robot by specified angle in degrees."""
-        self.state = State.MOVING
-        # TODO: implement turning logic
-
-    def stop(self):
-        """Stop both drive wheels."""
-        self.state = State.STOPPED
-        self.left_wheel.stop()
-        self.right_wheel.stop()
-
-    
     # MAIN PROCEDURE
 
     def run(self):
@@ -140,31 +94,34 @@ class Robot:
         # TODO
         # backup to wall to align direction
         # TODO
-        # move to keypad
-        self.move_forward(12)
-        self.turn(90)
-        self.move_forward(29)
-        self.turn(-90)
-        self.move_forward(-4.5)
-        # press keypad
-        self.press_keypad()
-        # move to duck
-        # TODO use move_forward() and turn_by()
-        # whack duck
-        self.whack_duck()
         # move to button
-        # TODO use move_forward() and turn_by()
+        self.drive.move_forward(26)
         # push button
         self.push_button()
         # move to crank
-        # TODO use move_forward() and turn_by()
+        self.drive.move_forward(-14)
+        self.drive.turn(90)
+        self.drive.move_forward(32)
+        self.drive.turn(-90)
+        self.drive.move_forward(21)
+        self.drive.turn(90)
+        self.drive.move_forward(36)
+        self.drive.turn(90)
+        self.drive.move_forward(10)
+        self.drive.turn(-90)
+        self.drive.move_forward(12)
+        self.drive.turn(-90)
+        self.drive.move_forward(2)
         # turn crank
         self.turn_crank()
+        # whack duck
+        # self.whack_duck()
+        # press keypad
+        # self.press_keypad()
         # fly drone
-        self.fly_drone()
+        # self.fly_drone()
         # return to start (go around other side of crater - extra points)
-        # TODO use move_forward() and turn_by()
-        
+
 
 
 # MAIN PROGRAM
@@ -172,12 +129,8 @@ class Robot:
 def main():
     # create robot instance
     robot = Robot()
-    # start up
-    robot.start()
     # run main procedure
     robot.run()
-    # shut down
-    robot.shutdown()
 
 
 # If this file is executed as a script

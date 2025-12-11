@@ -167,3 +167,8 @@ class Drive:
         # time.sleep(5)
         # self._shutdown()
         # -------------------------------------------------------------------
+
+    def turn(self, angle_deg: float):
+        """Turn robot by specified angle in degrees."""
+        # TODO: implement turning logic
+        pass

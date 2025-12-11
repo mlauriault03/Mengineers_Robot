@@ -44,11 +44,11 @@ def test2():
 
 
 def tune_servo_pulses():
-    servo  = Servo(PIN_SERVO_RIGHT, -1,
+    servo = Servo(PIN_SERVO_RIGHT, -1,
         pulse_reverse = 1000,
         pulse_neutral = 1500,
         pulse_forward = 2000
-        )
+    )
     # servo = Servo(PIN_SERVO_RIGHT, -1)
     speed_input = 0
     while True:
