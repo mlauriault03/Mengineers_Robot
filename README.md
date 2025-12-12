@@ -1,10 +1,11 @@
 # Mengineers Robot
 
-## Instructions
+## Run Instructions
 
-Run the following commands in a terminal on the Raspberry Pi:
+1. Power on the Raspberry Pi.
+2. Connect to the Raspberry Pi remotely via "Remote shell" using Raspberry Pi Connect. See our [Pi Documentation](/PI_README.md) for more details on how to do this.
+3. Run the following commands in the remote shell:
 ```
 cd Mengineers_Robot/
-sudo docker build --platform linux/arm64 -t codrone-test . && \
-sudo docker run -it --rm --device=/dev/ttyACM0:/dev/ttyACM0 --privileged codrone-test
+python3 main.py
 ```
